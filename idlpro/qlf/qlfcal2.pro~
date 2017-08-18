@@ -1,0 +1,27 @@
+dpb=360/9000.	;[degree/bit]
+ddeg=1.	;[degree]
+dbit=round(ddeg/dpb)	;[bit]
+ndeg=round(360/ddeg)
+
+wl0=600.	;[nm]
+
+for k=0,nb-1 do begin
+  	b=string(k+1,form='(i1)')
+
+	restore,'block'+b+'.sav'
+	nwl2=n_elements(wl2)
+
+	ip0=round(interpol(indgen(nwl2),wl2,wl0))
+	int0=reform(cspec3[ip0,*])
+	fft(int0)
+
+	for j=0,ndeg-1 do begin
+		print,k,j
+		plot,wl,spec[*,j]-dark,title='block'+b+' '+string(j+ddeg,form='(i3)')+' deg',xtit='nm',yra=[1,2l^16-1], $
+		  xs=3,ys=3,psy=3,/ylog
+		write_gif,'block'+b+'.gif',tvrd(),/multi
+	endfor
+	write_gif,'block'+b+'.gif',/close
+endfor
+
+end

@@ -1,0 +1,160 @@
+; mmsp_lcvr.pro
+;   MMSP measurement of LCVR
+;	2011.2.16	k.i., k.n.
+;	2012.3.28	k.i., 	Meadowlark driver
+;	2012.4.10	k.i., m.h. 	get_temp()
+;	2012.10.29	m.h get_temp -> get_lctemp
+;	2013.01.22	k.i., m.h. get_lctemp -> t=get_therm_temp(/init)
+;	2015.12.06	k.i., k.o. pn2=-pn1/5
+
+;@aro_lcdriver
+;@mllclib_usb	; Meadowlark  driver
+@mllclib	; Meadowlark  driver
+@mmsplib
+@emplib
+@hr2000lib
+
+;-----------------------------------------------
+expo=6		; exposure, ms
+integ=10	; integration
+;lcv=[0., 2., 4., 6.]	; LC voltage for incidence angle test
+;lcv=[0., 2., 4., 2., 0]	; LC voltage for hysteresis test
+lcv=[0, 0.5, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10]
+ID='LC5'
+
+;ftemp=dialog_input(prompt='setting temp')
+ftemp='20'	; T in file name
+if ftemp eq '' then goto,fin
+incang='p00'
+seqn='02'
+T_mode='On'
+lcvinit=0.	; initial LC volt
+;------------------------------------------------
+fnam=ID+'_T'+ftemp+'_I'+incang+'_'+seqn
+fnam=ID+'_T'+ftemp+'_'+seqn
+iobit=1
+thermister='murata'	; ''(default) - Nikkisyo
+
+;--- init WP motors
+pm=emp_ctl()
+pm.m1.name='M1: P-Analyzer'
+pm.m2.name='M2: P-Generator'
+pm.m1.vm = 54000l/5
+pm.m2.vm = pm.m1.vm/5
+pm.dev_exist=1
+; WP motor -- 18000pulse/rot (0.02deg/pulse)
+
+;--- init spectrograph
+hr_init,spname
+wl=hr_getwl()	; wavelength array [2048]
+npix=n_elements(wl)
+
+p = mmsp_param(pm,spname)
+if p.spectrograph eq 'MayaPro2000' then p.expo=p.expo>6
+case p.spectrograph of
+	'HR2000+' : yrange=[0,16384.]
+	'MayaPro2000' : yrange=[0,65536.] ;;;fixed yrange
+endcase
+
+p.integ=integ
+p.expo=expo
+p.optics=ID
+p.incang=incang
+p.seqn=seqn
+p.T_mode=T_mode
+p.ftemp=ftemp
+hr_setexpo,p.expo
+
+lcdrv_open,'COM8'		; Meadowlark LC control
+;lcdrv_open,USBx='USB1'		; Meadowlark LC control
+
+
+empinit,'COM9';,p=pm
+common emplib,notused,pns	; for reset pns to avoid origin
+if p.T_mode eq 'On' then begin
+	t=get_therm_temp(/init); init contex AD
+;	get_lctemp,t,v,ptemp,time,/init	; init contex AD
+	p.temp=strtrim(t[0],2)
+endif
+
+;-------------------------------------------------
+	print,'Measure'
+	;-- dark --
+	print,'Get Dark'
+	hr_gpio,iobit,1	; bit-iobit, out-0
+	sp=dblarr(npix)
+	for i=0,p.integ-1 do begin
+		sp1=hr_getsp1()
+		sp=sp+sp1
+	endfor
+	drk=sp
+	hr_gpio,iobit,0	; bit-iobit, out-1
+	plot,wl,drk
+	;-- origin --
+	print,'Origin'
+	empset,1,vm=3000l & wait,0.05
+	empset,2,vm=3000l & wait,0.05
+	emporig,1 &	wait,0.05
+	emporig,2 &	wait,0.1
+;	empstatus,busy=busy,nodisp=nodisp
+;	while busy eq 1 do empstatus,busy=busy,nodisp=nodisp
+;	setlcvolt,lcvinit,-1	; ARCOptics driver
+;	lcvolt,1,lcvinit,USBx='USB1'	; Meadowlark driver
+	lcvolt,1,lcvinit		; Meadowlark driver
+
+	;--
+	ans='' &	read,ans
+	dat=dblarr(npix,p.nth)
+	sp=dblarr(npix)
+	nv = n_elements(lcv)
+	for k=0,nv-1 do begin
+	    lcv1=lcv[k]
+	    ; setlcvolt,lcv1,-1
+	    ; lcvolt,1,lcv1,USBx='USB1'	; Meadowlark driver
+	    lcvolt,1,lcv1		; Meadowlark driver by COMx
+	    wait,0.1
+	    dmy=yymmdd(get_time=time)
+	    p.time=strmid(time,0,2)+strmid(time,3,2)+strmid(time,6,2)
+	    clcv1=string(lcv1,form='(f5.2)')
+	    if p.T_mode eq 'On' then begin
+		t=get_therm_temp(ch=0,therm=thermister)
+;		get_lctemp,t,v,ptemp,time
+		p.temp=strtrim(t[0],2)
+	    endif
+	    for j=0,p.nth-1 do begin
+		pn1=j*p.m.m1.revpn/360.*p.dth1
+		pn2=-pn1/5
+		;emppos2,pn1,pn2,/gwait
+		emppos,2,pn2 &	wait,0.01
+		emppos,1,pn1,/gwait
+		;pn1=p.m.m1.revpn/360.*p.dth1
+		;empmove,1,pn1,/gwait
+		;empmove,2,pn1/5,/gwait
+		sp=dblarr(npix)
+		for i=0,p.integ-1 do begin
+			sp1=hr_getsp1()
+			sp=sp+sp1
+		endfor
+		dat[*,j]=sp-drk
+		plot,wl,sp1,yrange=yrange,ystyle=1,title=clcv1+': '+string(j,form='(i3)'), $
+			xtitle='wl [nm]',xrange=[200,1100],xstyle=1
+	    endfor
+	    if p.T_mode eq 'On' then begin
+		t=get_therm_temp(ch=0,therm=thermister)
+;		get_lctemp,t,v,ptemp,time,/init
+		p.temp=p.temp+', '+strtrim(t[0],2)
+	    endif
+	    newpn1 = p.nth *p.m.m1.revpn/360. *  p.dth1
+	    emppos,2,-newpn1/5 &	wait,0.01
+	    emppos,1,newpn1,/gwait &	wait,0.1
+	    pns[[0,1]] = 0
+	    p.outfile=fnam+'_v'+string(lcv1*1000,form='(i05)')+'.sav'
+	    save,p,wl,dat,lcv1,file=p.outdir+p.outfile
+	    print,'save '+p.outdir+p.outfile
+	endfor
+fin:
+empclose
+hr_close
+lcdrv_close
+
+end

@@ -1,0 +1,346 @@
+;PRO T3_GUItest
+;+
+;
+;  T3_GUItest.pro
+;
+;Main debug procedure by widget for SMART T3 prosilica observation
+;based on DST Poralization script by T. Anan
+;
+;20100512  T.K.
+;
+;==========================headder============================;
+;PRO T3_GUItest_event, ev
+;PRO T3_GUItest
+;
+;-
+
+;=========================include=============================;
+@T3_ParamLib
+@T3_CameraLib
+@T3_ObsLib
+;=========================main================================;
+;**************************************************************
+PRO T3_GUItest_event, ev
+;--------------------------------------------------------------
+;common T3_ParamLib
+
+prodll='C:\Projects\cprog\VS2008\prosilica\Debug\prosilica.dll'
+
+tmp='                                                             '
+
+wp={widget_param, $
+    wavelength: '6000',       $   ; wave length observed [A]
+    expo:        50l,         $   ; exposure time [usec]
+    gain:        0,           $   ; gain 0�`28
+    nimg:        100,         $   ;  # of image 
+    binx:        2,           $   ; Binning X 1�`8
+    biny:        2,           $   ; Binning Y 1�`1200
+    Height:      600,         $   ; Height  max=1200 (biny=1)
+    Width:       800,         $   ; Width  max=1600 (binx=1)
+    RegionX:     0,           $   ; start of region read out,pixel,left edge
+    RegionY:     0,           $   ; start of region read out,pixel,top edge
+    clock:       79861111l,  $   ; TimeStanmpFrequency [Hz]
+    timelo:      0,           $   ; Time stamp, lower 32-bits
+    timehi:      0,           $   ; Time stamp, upper 32-bits
+    svdir:       'C:\Projects\IDLPRO\test_tk', $   ; save directory
+    fname:       'fname',     $   ; head of file name 
+    nf:          2,           $   ; number of files
+    input:       tmp,         $   ; contec cdio input �@�����j�^�[�v�̕����񃁃����i�H�j
+    output:      tmp,         $   ; contec cdio output�@����m�ۂ���K�v����
+    r_m:         ' ',         $   ; RADIUS [arcmin]
+    r_s:         ' ',         $   ; RADIUS [arcsec]
+    p_d:         ' ',         $   ; POLAR ANGLE [arcdeg]
+    p_m:         ' ',         $   ; POLAR ANGLE [arcmin]
+    i_d:         ' ',         $   ; INCLINATION [arcdeg]
+    i_m:         ' ',         $   ; INCLINATION [arcmin]
+    i_s:         ' ',         $   ; INCLINATION [arcsec]
+    n_evsample:  0l           $   ; omake
+   }
+   
+wd={wd_cdio,  $
+  bt_pren:  0l, $   ; �v���r���[�X�g�b�v
+  in:   0l, $   ; contec DIO ��͏��
+  out:    0l, $   ; contec DIO �o�͏�
+  opend:    0l, $   ; contec DIO ����X�g�b�v
+  bs_wv_op: 0l, $   ; contec DIO ����X�^�[�g
+  height:   0l, $   ; prosilica Height
+  width:    0l, $   ; prosilica Width
+  regionx:  0l, $   ; prosilica RegionX
+  regiony:  0l, $   ; prosilica RegionY
+  Exit:   0l  $
+}
+
+
+rdio=1  & stprm=1
+widget_control, ev.id, get_uvalue=uvalue,get_value=value
+
+print,'uvalue=',uvalue
+
+
+  if (uvalue eq "nimg") then begin
+    if (fix(value) lt 0) or (fix(value) ge 100) then begin 
+    endif else begin
+      wp.nimg=fix(value) 
+    endelse 
+  endif 
+  if (uvalue eq "expo") then wp.expo=float(value)
+  if (uvalue eq "gain") then wp.gain=fix(value)
+  if (uvalue eq "binx") then wp.binx=fix(value)
+  if (uvalue eq "biny") then wp.biny=fix(value)
+  if (uvalue eq "height") then begin
+    if (fix(value) gt 1200/wp.binx) then begin 
+      MessageBox,'Height must less than '+strcompress(string(1200/wp.binx),/remove_all)
+        widget_CONTROL,wd.height,set_value=string(wp.Height, form='(i5)')
+    endif else begin  &  wp.Height=fix(value)  &  endelse  &  endif 
+  if (uvalue eq "width") then begin
+    if (fix(value) gt 1600/wp.biny) then begin 
+      MessageBox,'Width must less than '+strcompress(string(1600/wp.biny),/remove_all)
+        widget_CONTROL,wd.width,set_value=string(wp.Width, form='(i5)')
+    endif else begin  &  wp.Width=fix(value)  &  endelse  &  endif  
+  if (uvalue eq "regionx") then begin
+    MessageBox,'RegionX Help : Start of region readout, in pixels; left edge.'
+    if (fix(value) gt wp.Width) then begin 
+      MessageBox,'ReginX must less than Width'
+        widget_CONTROL,wd.regionx,set_value=string(wp.RegionX, form='(i5)')
+    endif else begin  &  wp.RegionX=fix(value)  &  endelse  &  endif  
+  if (uvalue eq "regiony") then begin
+    MessageBox,'RegionY Help : Start of region readout, in pixels; top edge.'
+    if (fix(value) gt wp.Height) then begin 
+      MessageBox,'ReginY must less than Height'
+        widget_CONTROL,wd.regiony,set_value=string(wp.RegionY, form='(i5)')
+    endif else begin  &  wp.RegionY=fix(value)  &  endelse  &  endif  
+
+  if (uvalue eq "svdir") then wp.svdir=value
+  if (uvalue eq "fname") then wp.fname=value
+  if (uvalue eq "nf") then wp.nf=value
+  if (uvalue eq "wavelength") then wp.wavelength=value
+  if (uvalue eq "r_m") then wp.r_m=strcompress(string(value),/remove_all)
+  if (uvalue eq "r_s") then wp.r_s=strcompress(string(value),/remove_all)
+  if (uvalue eq "p_d") then wp.p_d=strcompress(string(value),/remove_all)
+  if (uvalue eq "p_m") then wp.p_m=strcompress(string(value),/remove_all)
+  if (uvalue eq "i_d") then wp.i_d=strcompress(string(value),/remove_all)
+  if (uvalue eq "i_m") then wp.i_m=strcompress(string(value),/remove_all)
+  if (uvalue eq "i_s") then wp.i_s=strcompress(string(value),/remove_all)
+  
+;  ev_prevstop=widget_event(wd.bt_pren,/nowait)
+;  ev_opend=widget_event(wd.opend,/nowait)
+;  ev_opst=widget_event(wd.bs_wv_op,/nowait)
+
+  ;------ Save -------; 
+  if (uvalue eq "svo") then begin
+    fn=strarr(wp.nf)
+    for i=0,wp.nf-1 do begin
+print,'===== '+strcompress(string(i+1),/remove_all)+' ====='
+      fn[i]=NormalObs()   
+    endfor
+    window,0,ys=wp.Height,xs=wp.Width
+    for i=0,wp.nf-1 do begin
+      mreadfits,fn[i],h,img
+      for j=0,wp.nimg-1 do begin
+        tvscl,img[*,*,j]
+        xyouts,0.05,0.05,string(j),/norm
+      endfor
+    endfor
+MessageBox,'!!FINISH NORMAL OBSERVATION!!'
+  endif
+
+;=========== preview ==========;
+
+
+;  if (uvalue eq 'prev_st') then begin
+;    T3_CamInit
+;    T3_CamSetParam
+;    if (n_elements(windex) eq 0) and (!D.WINDOW eq -1) then begin
+;      window,0,xs=wp.Width,ys=wp.Height & windex=0  & endif
+;    if (n_elements(windex) eq 0) and (!D.WINDOW ne -1) then begin
+;      windex=!D.WINDOW+1  & window,windex,xs=wp.Width,ys=wp.Height  
+;    endif else begin  &  window,windex,xs=wp.Width,ys=wp.Height  &  endelse;
+;
+;    img=intarr(wp.Width,wp.Height)
+;    i=0
+;    while i lt 10 do begin
+    
+ ;   while ev_prevstop.id eq 0 do begin
+     ;print,'now previewing!'
+;     WSET, windex
+;     pro_preview,img
+ ;    ev_prevstop=widget_event(wd.bt_pren,/nowait)
+;     ev_emp=widget_event(/nowait)
+;    endwhile
+;    T3_CamFin
+;  endif
+
+;========= profiles ==============;
+  if (uvalue eq 'prof') then begin
+    if (n_elements(windex) eq 0) and (!D.WINDOW eq -1) then begin
+      window,0,xs=wp.Width,ys=wp.Height & windex=0  & endif
+    if (n_elements(windex) eq 0) and (!D.WINDOW ne -1) then begin
+      windex=!D.WINDOW+1  & window,windex,xs=wp.Width,ys=wp.Height  
+    endif else begin  &  window,windex,xs=wp.Width,ys=wp.Height  &  endelse
+    wset,windex
+    T3_CamInit
+    T3_CamSetParam
+    proimg=intarr(wp.Width,wp.Height)
+    pro_preview,proimg
+    T3_CamFin
+    profiles,proimg
+  endif
+
+
+;====================================;
+
+if (uvalue eq "EXIT") then WIDGET_CONTROL, /destroy, ev.top
+
+end
+
+
+
+;**************************************************************
+PRO T3_GUItest
+;--------------------------------------------------------------
+common T3_ParamLib
+
+tmp='                                                             '
+
+wp={widget_param, $
+    wavelength: '6000',       $   ; wave length observed [A]
+    expo:        50l,         $   ; exposure time [usec]
+    gain:        0,           $   ; gain 0�`28
+    nimg:        100,         $   ;  # of image 
+    binx:        2,           $   ; Binning X 1�`8
+    biny:        2,           $   ; Binning Y 1�`1200
+    Height:      600,         $   ; Height  max=1200 (biny=1)
+    Width:       800,         $   ; Width  max=1600 (binx=1)
+    RegionX:     0,           $   ; start of region read out,pixel,left edge
+    RegionY:     0,           $   ; start of region read out,pixel,top edge
+    clock:       79861111l,  $   ; TimeStanmpFrequency [Hz]
+    timelo:      0,           $   ; Time stamp, lower 32-bits
+    timehi:      0,           $   ; Time stamp, upper 32-bits
+    svdir:       'C:\Projects\IDLPRO\test_tk', $   ; save directory
+    fname:       'fname',     $   ; head of file name 
+    nf:          2,           $   ; number of files
+    input:       tmp,         $   ; contec cdio input �@�����j�^�[�v�̕����񃁃����i�H�j
+    output:      tmp,         $   ; contec cdio output�@����m�ۂ���K�v����
+    r_m:         ' ',         $   ; RADIUS [arcmin]
+    r_s:         ' ',         $   ; RADIUS [arcsec]
+    p_d:         ' ',         $   ; POLAR ANGLE [arcdeg]
+    p_m:         ' ',         $   ; POLAR ANGLE [arcmin]
+    i_d:         ' ',         $   ; INCLINATION [arcdeg]
+    i_m:         ' ',         $   ; INCLINATION [arcmin]
+    i_s:         ' ',         $   ; INCLINATION [arcsec]
+    n_evsample:  0l           $   ; omake
+   }
+   
+wd={wd_cdio,  $
+  bt_pren:  0l, $   ; �v���r���[�X�g�b�v
+  in:   0l, $   ; contec DIO ��͏��
+  out:    0l, $   ; contec DIO �o�͏�
+  opend:    0l, $   ; contec DIO ����X�g�b�v
+  bs_wv_op: 0l, $   ; contec DIO ����X�^�[�g
+  height:   0l, $   ; prosilica Height
+  width:    0l, $   ; prosilica Width
+  regionx:  0l, $   ; prosilica RegionX
+  regiony:  0l, $   ; prosilica RegionY
+  Exit:   0l  $
+}
+
+
+
+main = WIDGET_BASE(title='Prosilica Observation',/column)
+
+  ;== Set Parameter ==;
+lab= widget_label(main,value='>>> Set Parameter <<<');,font=2)
+bs_sp=widget_base(main, /column, /frame)
+  bs_sp2=widget_base(bs_sp, /row)
+    lab=widget_label(bs_sp2,value='   expo(mininum 50 usec)  : ')
+    text=widget_text(bs_sp2,value=string(wp.expo, form='(i5)'), xsize=6, ysize=1, uvalue='expo',/edit)
+    gains=strcompress(string(indgen(29)),/remove_all)
+    drop=cw_bselector(bs_sp2,gains,label_left='us        gain    : ', uvalue="gain",set_value=0, ysize=1)
+    lab=widget_label(bs_sp2,value='      integ(0-100)   : ')
+    text=widget_text(bs_sp2,value=string(wp.nimg, form='(i5)'), xsize=6, ysize=1, uvalue='nimg',/edit)
+  bs_sp3=widget_base(bs_sp, /row)
+    lab=widget_label(bs_sp3,value='      binx     : ')
+    text=widget_text(bs_sp3,value=string(wp.binx, form='(i5)'), xsize=6, ysize=1, uvalue='binx',/edit)
+    lab=widget_label(bs_sp3,value='      biny     : ')
+    text=widget_text(bs_sp3,value=string(wp.biny, form='(i5)'), xsize=6, ysize=1, uvalue='biny',/edit)
+  bs_sp4=widget_base(bs_sp, /row)
+    lab=widget_label(bs_sp4,value='    Height    : ')
+    wd.height=widget_text(bs_sp4,value=string(wp.Height, form='(i5)'), xsize=6, ysize=1, uvalue='height',/edit)
+    lab=widget_label(bs_sp4,value='    width     : ')
+    wd.width=widget_text(bs_sp4,value=string(wp.Width, form='(i5)'), xsize=6, ysize=1, uvalue='width',/edit)
+    lab=widget_label(bs_sp4,value='pix')
+  bs_sp5=widget_base(bs_sp, /row)
+    lab=widget_label(bs_sp5,value='   RegionX : ')
+    wd.regionx=widget_text(bs_sp5,value=string(wp.RegionX, form='(i5)'), xsize=6, ysize=1, uvalue='regionx',/edit)
+    lab=widget_label(bs_sp5,value='   RegionY  : ')
+    wd.regiony=widget_text(bs_sp5,value=string(wp.RegionY, form='(i5)'), xsize=6, ysize=1, uvalue='regiony',/edit)
+
+  ;== Observation ==;
+lab_ob = widget_label(main,value='>>> Observation <<<');,font=2)
+bs_ob=widget_base(main, /column, /frame)
+  bs_sv=widget_base(bs_ob, /column)
+    bs_sv0=widget_base(bs_sv, /row)
+      lab=widget_label(bs_sv0,value='Save Directory : ')
+      text=widget_text(bs_sv0,value=wp.svdir, xsize=45, uvalue='svdir',/edit)
+    bs_sv1=widget_base(bs_sv, /row)
+      lab=widget_label(bs_sv1,value='   File Name    : ')
+      text=widget_text(bs_sv1,value=wp.fname, xsize=10, uvalue='fname',/edit)
+      lab=widget_label(bs_sv1,value='          Number of Set : ')
+      text=widget_text(bs_sv1,value=string(wp.nf, form='(i5)'), xsize=6, uvalue='nf',/edit)
+    bs_sv2=widget_base(bs_sv, /row)
+      lab=widget_label(bs_sv2,value=' Wave Length   : ')
+      text=widget_text(bs_sv2,value=wp.wavelength, xsize=6, uvalue='wavelength',/edit,  $
+          xoffset=100000)
+      lab=widget_label(bs_sv2,value='[A]')
+    bs_sv3=widget_base(bs_sv, /row)
+      lab=widget_label(bs_sv3,value='r :')
+      text=widget_text(bs_sv3,value=wp.r_m, xsize=4, uvalue='r_m',/edit,  $
+          xoffset=100000)
+      lab=widget_label(bs_sv3,value='m')
+      text=widget_text(bs_sv3,value=wp.r_s, xsize=4, uvalue='r_s',/edit,  $
+          xoffset=100000)
+      lab=widget_label(bs_sv3,value='s')
+
+      lab=widget_label(bs_sv3,value='  p :')
+      text=widget_text(bs_sv3,value=wp.p_d, xsize=4, uvalue='p_d',/edit,  $
+          xoffset=100000)
+      lab=widget_label(bs_sv3,value='d')
+      text=widget_text(bs_sv3,value=wp.p_m, xsize=4, uvalue='p_m',/edit,  $
+          xoffset=100000)
+      lab=widget_label(bs_sv3,value='m')
+
+      lab=widget_label(bs_sv3,value='   i :')
+      text=widget_text(bs_sv3,value=wp.i_d, xsize=4, uvalue='i_d',/edit,  $
+          xoffset=100000)
+      lab=widget_label(bs_sv3,value='d')
+      text=widget_text(bs_sv3,value=wp.i_m, xsize=4, uvalue='i_m',/edit,  $
+          xoffset=100000)
+      lab=widget_label(bs_sv3,value='m')
+      text=widget_text(bs_sv3,value=wp.i_s, xsize=4, uvalue='i_s',/edit,  $
+          xoffset=100000)
+      lab=widget_label(bs_sv3,value='s')
+    bs_sv4=widget_base(bs_sv, /row)
+      bt=widget_button(bs_sv4, value="Get (NOM)", uvalue = "svo",/align_center,xsize=120)
+    bs_pr=widget_base(bs_ob, /row)
+    bt_prst=WIDGET_BUTTON(bs_pr,uvalue='prev_st',value='Preview Start',/align_center,xsize=123)
+    wd.bt_pren=WIDGET_BUTTON(bs_pr,uvalue='prev_en',value='Preview Stop',/align_center,xsize=120)
+    bt_prof=WIDGET_BUTTON(bs_pr,uvalue='prof',value='Profiles',/align_center,xsize=123)
+
+lab_ob = widget_label(main,value='>>> �Ό������]���u <<<');,font=2)
+bs_wv=widget_base(main, /column, /frame)
+  bs_wv1=widget_base(bs_wv,/row)
+   lab = widget_label(bs_wv,value='<< STATE >>');,font=2)
+  bs_wv_ip=widget_base(bs_wv, /column)
+    bs_wv_ip1=widget_base(bs_wv_ip, /row)
+      lab = widget_label(bs_wv_ip1,value='     State     = ');,font=2)
+      wd.in = widget_label(bs_wv_ip1,value=wp.input)
+    bs_wv_ip2=widget_base(bs_wv_ip, /row)
+      lab = widget_label(bs_wv_ip2,value='Output State = ');,font=2)
+      wd.out = widget_label(bs_wv_ip2,value=wp.output)
+  lab = widget_label(bs_wv,value='<< OUTPUT >>');,font=2)
+bt_exit = widget_button(main, value="Exit", uvalue = "EXIT")
+widget_control, main, /realize
+XMANAGER,'T3_GUItest',main,modal=modal
+
+END
+

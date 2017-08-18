@@ -1,0 +1,157 @@
+;	sartorius.pro
+
+;	2016.01.28	t.a.
+
+
+;=============================================
+; include
+@makolib
+
+
+;=============================================
+pro sartorius_event, ev
+;---------------------------------------------
+common widget,wp,wd,p
+
+widget_control,ev.id,get_uvalue=uvalue,get_value=value
+ev_prev_stop=widget_event(wd.preven,/nowait)
+ev_save_stop=widget_event(wd.saveen,/nowait)
+
+case uvalue of
+	'exptime':begin
+		wp.p.EXPTIME=long(value)
+		set_parameters,wp.p
+		widget_control,wd.exptime,set_value=string(float(wp.p.EXPTIME),format='(i8)')
+
+		print,''
+		print,'set exposure time', wp.p.EXPTIME
+	end
+	'prevst':begin
+		print,'preview start'
+		window,0,xs=wp.wx,ys=wp.wy
+		!p.multi=0
+		loadct,0
+		wp.p.NAXIS3=1
+		img=uintarr(wp.p.NAXIS1,wp.p.NAXIS2)
+
+		i=0l
+		while ev_prev_stop.id eq 0 do begin
+			imgs=mako_obs(wp.p,img,header=0)
+			tvscl,rebin(imgs,wp.wx,wp.wy)
+			xyouts,/norm,0.05,0.05,string(i)
+			ev_prev_stop=widget_event(wd.preven,/nowait)
+			ev_emp=widget_event(/nowait)
+			i=i+1
+		endwhile
+		img=0
+		imgs=0
+		print,'preview stop'
+	end
+	'savest':begin
+		print,'save start'
+		window,0,xs=wp.wx,ys=wp.wy
+		!p.multi=0
+		loadct,0
+		wp.p.NAXIS3=1
+		img=uintarr(wp.p.NAXIS1,wp.p.NAXIS2)
+
+		i=0l
+		while ev_save_stop.id eq 0 do begin
+			imgs=mako_obs(wp.p,img,header=header)
+			filename=wp.savedir+wp.topname+strmid(header.date_obs,0,11)+	$
+				strmid(header.date_obs,11,2)+strmid(header.date_obs,14,2)+	$
+				strmid(header.date_obs,17,2)+'.sav'
+
+			save,imgs,header,file=filename
+			tvscl,rebin(imgs,wp.wx,wp.wy)
+			xyouts,/norm,0.05,0.05,'saved '+filename
+			ev_save_stop=widget_event(wd.saveen,/nowait)
+			ev_emp=widget_event(/nowait)
+			i=i+1
+		endwhile
+		img=0
+		imgs=0
+		print,'save stop'
+	end
+	'exit':begin
+		mako_fin
+		wdelete,0
+		widget_control,/destroy, ev.top
+	end
+	else:print,'no uvalue'
+endcase
+
+END
+;=============================================
+pro sartorius
+;---------------------------------------------
+common widget,wp,wd,p
+
+caldat,systime(/JULIAN),mon,day,year,hour,minu,seco
+p=mako_init()
+wp={widget_param,		$
+	p:		p,	$
+	topname:	'ha',	$
+	savedir:	'C:\data\'+string(year,format='(i4.4)')+	$
+			string(mon,format='(i2.2)')+			$
+			string(day,format='(i2.2)')+'\',			$
+	wx:		2048/4,	$
+	wy:		2048/4	$
+	}
+wd={wd_cdio,			$
+	exptime:	0l,	$
+	prevst:		0l,	$
+	preven:		0l,	$
+	savest:		0l,	$
+	saveen:		0l,	$
+	topname:	0l,	$
+	exit:		0l	$
+	}
+set_parameters,wp.p
+if is_dir(wp.savedir) eq 0 then spawn,'mkdir '+wp.savedir
+
+xsize=300
+ysize=30
+fnt='HGënâpäpÉSÉVÉbÉNUB*BOLD*20'
+fntsmall='HGënâpäpÉSÉVÉbÉNUB*BOLD*10'
+
+main=widget_base(title='SARTORIUS Ha observation',/column,xsize=xsize)
+
+ base1=widget_base(main,/row)
+  lab=widget_label(base1,value='EXPO TIME ',	$
+	units=0,xsize=xsize/3.,ysize=ysize,FONT=fnt,xoffset=0,yoffset=0)
+  wd.exptime=widget_text(base1,value=string(wp.p.EXPTIME,format='(i8)'),edit=1,	$
+	units=0,xsize=xsize/36.,ysize=ysize/80.,uvalue='exptime',FONT=fnt)
+  lab=widget_label(base1,value=' usec',	$
+	units=0,xsize=xsize/3.,ysize=ysize,FONT=fnt,xoffset=0,yoffset=0)
+
+ base2=widget_base(main,/row)
+  lab=widget_label(base2,value='PREVIEW ',	$
+	units=0,xsize=xsize/24.*7.,ysize=ysize,FONT=fnt,xoffset=0,yoffset=0)
+  wd.prevst=widget_button(base2,uvalue='prevst',value='START',/align_center,xsize=xsize/3,FONT=fnt)
+  wd.preven=widget_button(base2,uvalue='preven',value='STOP',/align_center,xsize=xsize/3,FONT=fnt)
+
+ base3=widget_base(main,/row)
+  lab=widget_label(base3,value='SAVE ',	$
+	units=0,xsize=xsize/24.*7.,ysize=ysize,FONT=fnt,xoffset=0,yoffset=0)
+  wd.savest=widget_button(base3,uvalue='savest',value='START',/align_center,xsize=xsize/3,FONT=fnt)
+  wd.saveen=widget_button(base3,uvalue='saveen',value='STOP',/align_center,xsize=xsize/3,FONT=fnt)
+
+ base4=widget_base(main,/row)
+  lab=widget_label(base4,value='FOLDER '+wp.savedir,	$
+	units=0,xsize=xsize,ysize=ysize,FONT=fnt10,xoffset=0,yoffset=0)
+
+ base5=widget_base(main,/row)
+  lab=widget_label(base5,value='FILENAME',	$
+	units=0,xsize=xsize/24.*7.,ysize=ysize,FONT=fnt10,xoffset=0,yoffset=0)
+  wd.exptime=widget_text(base5,value=wp.topname,edit=1,	$
+	units=0,xsize=xsize/50.,ysize=ysize/80.,uvalue='exptime',FONT=fnt10)
+  lab=widget_label(base5,value='yyyy-mm-ddThh:mm:ss.sav',	$
+	units=0,xsize=xsize,ysize=ysize,FONT=fnt10,xoffset=0,yoffset=0)
+
+
+wd.exit=widget_button(main,value='EXIT',uvalue='exit')
+widget_control,main,/realize
+xmanager,'sartorius',main,modal=modal
+
+END

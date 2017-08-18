@@ -1,0 +1,33 @@
+n=10
+integ=1
+expo=50	; msec
+gain=3
+nx=640 &	ny=512
+;---------- start cap ----------;
+  m_hCam=call_external(dllfile,'startcap',m_hCam,expo,gain,/all_value,/cdecl)
+  setp=call_external(dllfile,'setpower',m_hCam,/all_value,/cdecl)
+;================================== add 2008/10/20
+  rr=call_external(dllfile,'initboard',/all_value,/cdecl)
+  rr=call_external(dllfile,'InitParam',integ,/all_value,/cdecl)
+  rr=call_external(dllfile,'AllocMemory',/all_value,/cdecl)
+;-=================================
+
+img1=intarr(nx,ny)
+
+for ii=0,9 do begin
+
+t1=double(systime(/seconds))
+for i=0,n-1 do $
+		mm=call_external(dllfile,'get_img',img1,value=[0b],/cdecl)
+t2=double(systime(/seconds))
+
+print,'Loop number    : ' , n
+print,'Total time (ms): ' , (t2-t1)*1000.
+print,'Total Expo (ms): ' , double(expo)*double(n)
+print,'Time Lag   (ms): ' , (t2-t1)*1000.-double(expo)*double(n)
+print,'---'
+endfor
+rr=call_external(dllfile,'ReleaseMemory',/all_value,/cdecl)
+rr=call_external(dllfile,'closeboard',/all_value,/cdecl)
+
+end

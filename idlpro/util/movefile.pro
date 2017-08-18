@@ -1,0 +1,26 @@
+;+
+;  movefile.pro
+;	move file, only in the same drive
+;	98/01/26	k.i.
+;-
+;**********************************************************************
+pro movefile,file1,file2
+dllfile='c:\nkrprj\cprog\oscomdll.dll'
+
+ff=findfile(file1,count=count1)
+if count1 eq 0 then begin
+	print,file1+' not exist..'
+	return
+endif
+ff=findfile(file2,count=count2)
+if count2 ne 0 then begin
+	dmy=call_external(dllfile, $
+		'Dremove',file2,value=[0d,0d], /S_VALUE)
+endif
+
+dmy=call_external(dllfile, $
+	'Drename',file1,file2,value=[0d,0d], /S_VALUE)
+
+print,file1+'  --->  '+file2
+
+end

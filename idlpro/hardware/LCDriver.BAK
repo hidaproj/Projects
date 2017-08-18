@@ -1,0 +1,15 @@
+;  AROptics LC driver
+;	Nishida,K.
+
+;---------------------------------------------------
+pro LCinit
+
+
+end
+
+;---------------------------------------------------
+pro setLCvolt,ch,volt
+;  use AROptics LC driver
+
+
+end

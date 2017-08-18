@@ -1,0 +1,90 @@
+; mllclib.pro
+;   Meadowlark LC driver lib.
+;   '12/01/18  k.i.  
+
+;*****************************************************
+pro lccom,com
+;-----------------------------------------------------
+; send command string to D3050
+common mllclib, dllfile
+
+retn = call_external(dllfile,'CommWrite',com,'CR')	; <- delimiter ='CR'
+
+end
+
+;*****************************************************
+pro lcdrv_Open,COMx
+;-----------------------------------------------------
+common mllclib, dllfile
+; initialize D3050
+;  COMx	-	COM port ("COM1" or "COM2")
+
+;  I_F='RS232C'
+;dllfile='C:\Projects\cprog\VS2005\RS232C\Debug\RS232C.dll'
+dllfile='C:\Projects\cprog\VS2005\RS232C2\Debug\RS232C2.dll'	; 2nd RS232C
+idlm=1	; delimiter = 'CR' only
+
+if not keyword_set(COMx) then COMx='COM2'
+retn = call_external(dllfile,'CommOpen', COMx, $
+		' baud=38400 parity=N data=8 stop=1', /PORTABLE )
+wait,0.1
+lccom,'ver:?'
+wait,0.01
+st = call_external(dllfile,'CommRead',40,/s_value)
+print,st
+
+end
+
+;*****************************************************
+pro lcdrv_close
+;-----------------------------------------------------
+; close COM port
+common mllclib, dllfile
+
+retn = call_external(dllfile,'CommClose')
+
+
+end 
+
+
+;*****************************************************
+pro lcvolt,n,V
+;-----------------------------------------------------
+;  put voltage on LC chan-n
+; n -	channel,  1-4
+; V -   volt
+
+i=uint(V*6553.5)
+cn=strcompress(string(n),/remove_all)
+ci=strcompress(string(i),/remove_all)
+com='ld:'+cn+','+ci
+print,com
+lccom,com
+
+end
+
+;*****************************************************
+pro lcvoltm,Vs
+;-----------------------------------------------------
+;  put voltage on LC chan-n
+; Vs[4] -   volt for ch 1-4
+
+is=uint(Vs*6553.5)
+com='ldd:'+strcompress(string(is[0]),/remove_all)
+for i=1,3 do com=com+','+strcompress(string(is[i]),/remove_all)
+print,com
+lccom,com
+
+end
+
+;*****************************************************
+pro lcread	; not work
+;-----------------------------------------------------
+common mllclib, dllfile
+len=40
+retn = call_external(dllfile,'CommRead',len,/S_Value)
+
+print,retn,':',strlen(retn)
+
+
+end

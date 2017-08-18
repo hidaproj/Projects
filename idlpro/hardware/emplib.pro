@@ -1,0 +1,498 @@
+; emplib.pro
+; library for controling EMP 400 via "Comm32.dll"
+;   '04/03/12  k.i. & Yamamoto
+;   '04/03/15  k.i.
+;   '04/03/16  Yamamoto  gwait
+;   '04/04/15  k.i.  m.offset
+;   '10/10/19  k.i.  empmove2 gwait, emporig '+'
+;   '15/12/06  k.i.  empmove, pni=long(pn)
+
+;*****************************************************
+pro empset,k,Vs=Vs,Vmax=Vmax,Acc=Acc
+;-----------------------------------------------------
+;  k   -- motor 1 or 2, if not set k=1
+;  Vmax  -- speed (pps),  max=18000x3,  250,000
+;  Vs  -- initial speed
+;  acc  -- acc.  5 - 10000, unit=0.1ms/kHz
+;  
+common emplib,dllfile,PNs,Vss,Vms,Acs,Unknown,Dev_exist
+
+if not keyword_set(k) then k=1
+ax=string(k,form='(i1)')
+if keyword_set(Acc) then begin
+	empcom,'T'+ax+' '+strcompress(string(Acc),/remove_all)
+	Acs(k-1)=Acc
+endif
+if keyword_set(Vs) then begin
+	empcom,'VS'+ax+' '+strcompress(string(Vs),/remove_all)
+	Vss(k-1)=Vs
+endif
+if keyword_set(Vmax) then begin
+	empcom,'V'+ax+' '+strcompress(string(Vmax),/remove_all)
+	Vms(k-1)=Vmax
+endif
+
+end
+
+;*****************************************************
+pro empinit,COMx,p=p
+;-----------------------------------------------------
+; initialize EMP-400
+;  COMx	-	COM port ("COM1" or "COM2")
+;  p  - EMP control structure
+
+common emplib,dllfile,PNs,Vss,Vms,Acs,Unknown,Dev_exist
+
+dev_exist=1
+if keyword_set(p) then Dev_exist=p.dev_exist
+
+dllfile='c:\nkrprj\cprog\Comm32\Debug\Comm32.dll'
+dllfile='C:\Projects\cprog\VS2005\RS232C\Debug\RS232C.dll'
+dllfile='C:\Projects\cprog\VS2010\RS232C_64\x64\Debug\RS232C_64.dll'
+if not keyword_set(COMx) then COMx='COM7'
+if dev_exist then $
+	retn = call_external(dllfile,'CommOpen', COMx, $
+		' baud=9600 parity=N data=8 stop=1', /PORTABLE )
+
+empcom,'PULSE1 2' & 	empcom,'PULSE2 2'	; 2パルス方式
+empcom,'UNIT1 1,1' & 	empcom,'UNIT2 1,1'	; 移動量単位＝pulse
+empcom,'SEN1 3'	& 	empcom,'SEN2 3'		; 3センサー方式原点
+
+; 初期設定　18000pulse/rot (0.02deg/pulse)
+Unknown=-999999l
+PNs=unknown*[1,1]
+if keyword_set(p) then begin
+	Vss=[p.m1.vs,p.m2.vs]
+	Vms=[p.m1.vm,p.m2.vm]
+	Acs=[p.m1.acc,p.m2.acc]
+	p.m1.pn=PNs(0)
+	p.m2.pn=PNs(1)
+endif else begin
+	Vss=100l*[1,1]
+	Vms=18000l*[1,1]
+	Acs=30*[1,1]
+endelse
+empset,1,Vs=Vss(0),Vmax=Vms(0),Acc=Acs(0)
+empset,2,Vs=Vss(1),Vmax=Vms(1),Acc=Acs(1)
+print,acs
+
+end 
+ 
+;*****************************************************
+pro empcom,com
+;-----------------------------------------------------
+; send command string to EMP-400
+common emplib,dllfile,PNs,Vss,Vms,Acs,Unknown,Dev_exist
+
+if not dev_exist then begin
+	print,'com=',com
+	return
+endif
+retn = call_external(dllfile,'CommWrite',com)
+
+end
+
+;*****************************************************
+pro empstart,k,cw=cw,ccw=ccw
+;-----------------------------------------------------
+;  k   -- motor 1 or 2
+common emplib,dllfile,PNs,Vss,Vms,Acs,Unknown,Dev_exist
+
+if not keyword_set(k) then k=1
+ax=string(k,form='(i1)')
+if keyword_set(cw) then empcom,'H'+ax+' +'
+if keyword_set(ccw) then empcom,'H'+ax+' -'
+wait,0.05
+empcom,'SCAN'+ax
+PNs(k-1)=unknown
+
+end
+
+;*****************************************************
+pro empstop,k
+;-----------------------------------------------------
+;  k   -- motor 1 or 2
+common emplib,dllfile,PNs,Vss,Vms,Acs,Unknown,Dev_exist
+
+if not keyword_set(k) then k=1
+ax=string(k,form='(i1)')
+empcom,'S'+ax
+
+end
+
+;*****************************************************
+pro emporig,k
+;-----------------------------------------------------
+; get mechanical origin
+;  k   -- motor 1 or 2
+common emplib,dllfile,PNs,Vss,Vms,Acs,Unknown,Dev_exist
+
+if not keyword_set(k) then k=1
+ax=string(k,form='(i1)')
+empcom,'H'+ax+' +' &	wait,0.05
+empcom,'MHOME'+ax
+PNs(k-1)=0l
+empcom,'RTNCR'+ax
+print,'Mechanical Origin:  PN'+ax+' is set to ',PNs(k-1)
+
+end 
+
+;*****************************************************
+function emptime,k,pn
+;-----------------------------------------------------
+; return expected time to complete
+;  k   -- motor 1 or 2, if not set k=1
+;  pn  -- number of pulse
+;  time - time for motor moving
+; 
+;
+;  default motor move degree 0.02 deg/pulse
+;  note : Acs unit is ms/kHz
+
+common emplib,dllfile,PNs,Vss,Vms,Acs,Unknown,Dev_exist
+
+if n_params() eq 1 then begin
+	pn=k
+	k=1
+endif
+
+p2=abs(pn)
+
+t0=(Vms(k-1)-Vss(k-1))*Acs(k-1)*1.e-6    ; note
+p0=(Vms(k-1)+Vss(k-1))*t0
+;print,'p0, p2 ;',p0,p2
+if p0 le p2 then begin
+	t1=(p2-p0)/Vms(k-1)
+	time=t1+t0
+endif else begin
+	time=sqrt(Vss(k-1)^2*Acs(k-1)^2*1.e-12 + Acs(k-1)*p2*1.e-6) $
+	-Vss(k-1)*Acs(k-1)*1.e-6
+endelse
+
+return,time
+end 
+
+;*****************************************************
+pro empmove,k,pn,gwait=gwait,m=m
+;-----------------------------------------------------
+; move motor by # of pulse
+;  k   -- motor 1 or 2, if not set k=1
+;  pn  -- number of pulse
+;  gwait - if 1, wait for movement
+;  m   -- motor control struct
+common emplib,dllfile,PNs,Vss,Vms,Acs,Unknown,Dev_exist
+
+if n_params() eq 1 then begin
+	pn=k
+	k=1
+endif
+ax=string(k,form='(i1)')
+
+pni=long(pn)
+
+if pni ge 0 then direc='+' else direc=''
+cpn=strcompress(string(pni),/remove_all)
+empcom,'D'+ax+' '+direc+cpn
+;;print,'D'+ax+' '+direc+cpn
+wait,0.05
+empcom,'INC'+ax
+if PNs[k-1] ne unknown then PNs[k-1]=PNs[k-1]+pn
+
+if keyword_set(gwait) then wait,emptime(k,pn)
+
+if keyword_set(m) then m.pn=PNs[k-1]
+
+end 
+
+;*****************************************************
+pro empmove2,pn1m,pn2m,gwait=gwait,p=p
+;-----------------------------------------------------
+; move motor by # of pulse
+;  pn1m $ pn2m  -- number of pulse
+;  gwait - if 1, wait for movement
+;  p    - EMP400 cotrol struct
+common emplib,dllfile,PNs,Vss,Vms,Acs,Unknown,Dev_exist
+
+pn1mi=long(pn1m)
+pn2mi=long(pn2m)
+if pn1mi ge 0 then direc='+' else direc='-'
+empcom,'H1 '+direc
+com='D1 '+strcompress(string(abs(pn1mi)),/remove_all)
+empcom,com
+if pn2mi ge 0 then direc='+' else direc='-'
+empcom,'H2 '+direc
+com='D2 '+strcompress(string(abs(pn2mi)),/remove_all)
+empcom,com
+wait,0.05
+empcom,'INC1'
+wait,0.05
+empcom,'INC2'
+if PNs[0] ne Unknown then PNs(0)=PNs(0)+pn1m
+if PNs[1] ne Unknown then PNs(1)=PNs(1)+pn2m
+if keyword_set(p) then begin
+	p.m1.pn=PNs[0]
+	p.m2.pn=PNs[1]
+endif
+if keyword_set(gwait) then begin
+	tim1=emptime(1,pn1m)
+	tim2=emptime(2,pn2m)
+	wait,max([tim1,tim2])
+endif
+
+end 
+
+;*****************************************************
+pro emppos,k,pn,gwait=gwait,m=m
+;-----------------------------------------------------
+; move motor to a pulse position
+;  k   -- motor 1 or 2
+;  pn  -- pulse position
+;  gwait - if 1, wait for movement
+;  m   -- motor control struct
+common emplib,dllfile,PNs,Vss,Vms,Acs,Unknown,Dev_exist
+
+if n_params() eq 1 then begin
+	pn=k
+	k=1
+endif
+ax=string(k,form='(i1)')
+if PNs[k-1] eq Unknown then begin
+	print,'Current position '+ax+' is unknown  (emppos)..'
+	return
+endif
+if keyword_set(gwait) then gwait=1 else gwait=0
+pnm=pn-PNs[k-1]
+empmove,k,pnm,gwait=gwait
+PNs[k-1]=pn
+if keyword_set(m) then m.pn=PNs[k-1]
+
+end 
+
+;*****************************************************
+pro emppos2,pn1p,pn2p,gwait=gwait,p=p
+;-----------------------------------------------------
+; move motor to a pulse position
+;  pn1p & pn2p -- pulse position
+;  gwait - if 1, wait for movement
+common emplib,dllfile,PNs,Vss,Vms,Acs,Unknown,Dev_exist
+
+if PNs[0] eq unknown or PNs[1] eq unknown then begin
+	print,'Current position unknown (emppos2).'
+	return
+endif
+pn1m=pn1p-PNs[0] &	pn2m=pn2p-PNs[1]
+if keyword_set(gwait) then gwait=1 else gwait=0
+empmove2,pn1m,pn2m,gwait=gwait,p=p
+end 
+
+;*****************************************************
+pro empclose
+;-----------------------------------------------------
+; close COM port
+common emplib,dllfile,PNs,Vss,Vms,Acs,Unknown,Dev_exist
+
+if Dev_exist then retn = call_external(dllfile,'CommClose')
+
+end 
+
+;*****************************************************
+pro empstatus,pns1,pns2,st,pnset=pnset,busy=busy,nodisp=nodisp
+;-----------------------------------------------------
+; get status string from EMP-400   >>> NOT WORK <<<
+;   pns1  --  current position of motor 1
+;   pns2  --  current position of motor 2
+;   pnset --  if set, PN1 & PN2 are set to correct value
+;   busy  --  if busy set 1 else 0
+;   nodisp -  no display
+common emplib,dllfile,PNs,Vss,Vms,Acs,Unknown,Dev_exist
+
+empcom,'R'
+wait,0.1
+len=100
+retn = call_external(dllfile,'CommRead',len)
+
+
+print,retn,':',strlen(retn)
+
+end 
+
+
+;**************************************************************
+function emp_event1, ev, wd, m, motor=motor
+;--------------------------------------------------------------
+;  wd  -- widget
+;  m   -- control parameters for 1 motor
+;  return new m
+common emplib,dllfile,PNs,Vss,Vms,Acs,Unknown,Dev_exist
+
+case (ev.id) of
+  wd.StartCW: begin
+	empstart,motor,/CW
+	m.pn=Unknown
+	end
+  wd.StartCCW: begin
+	empstart,motor,/CCW
+	m.pn=Unknown
+	end
+  wd.Stop: begin
+	empstop,motor
+	end
+  wd.Vs: begin
+	m.vs=long(gt_wdtxt(ev.id))
+	empset,motor,vs=m.vs
+	end
+  wd.Vm: begin
+	m.vm=long(gt_wdtxt(ev.id))
+	empset,motor,vm=m.vm
+	widget_control, wd.Vm_sld, set_value=m.vm
+	end
+  wd.Vm_sld: begin
+	widget_control, wd.Vm_sld, get_value=vm
+	m.vm=long(vm)
+	empset,motor,vm=m.vm
+	widget_control, wd.Vm, set_value=string(m.vm,form='(i5)')
+	end
+  wd.Acc: begin
+	m.acc=fix(gt_wdtxt(ev.id))
+	empset,motor,acc=m.acc
+	end
+  wd.Step: begin
+	m.step=fix(gt_wdtxt(ev.id))
+	end
+  wd.StepCW: begin
+	empmove,motor,m.step,m=m
+	end
+  wd.StepCCW: begin
+	empmove,motor,-m.step,m=m
+	end
+  wd.Angl: begin
+	m.angl=fix(gt_wdtxt(ev.id))
+	pos=m.angl*m.revpn/360
+	emppos,motor,pos,m=m
+	end
+  wd.Orig: begin
+	emporig,motor
+	empmove,motor,m.offset
+	m.pn=0l
+	end
+  wd.SetOrig: begin
+	m.offset=m.pn
+	print,'offset is ',m.offset
+	m.pn=0l
+	end
+endcase
+
+if m.pn eq unknown then begin
+	widget_control, wd.PN, set_value='unknown'
+endif else begin
+	widget_control, wd.PN, set_value=string(m.pn,form='(i7)')
+endelse
+
+return,m
+end
+
+;--------------------------------
+function emp_event, ev, wd, p
+
+i = where(ev.id eq long_struct_vals(wd.m1))
+if i(0) ne -1 then begin
+	p.m1 = emp_event1(ev, wd.m1, p.m1, motor=1)
+endif
+i = where(ev.id eq long_struct_vals(wd.m2))
+if i(0) ne -1 then begin
+	p.m2 = emp_event1(ev, wd.m2, p.m2, motor=2)
+endif
+
+return,p
+end
+
+;**********************************************************************
+function widget_emp1, base, m
+
+wd_emp1={wd_emp1,	$
+	Vs:		0l,	$
+	Vm:		0l,	$
+	Vm_sld:		0l,	$
+	Acc:		0l,	$
+	PN:		0l,	$
+	StartCW:	0l,	$
+	StartCCW:	0l,	$
+	Stop:		0l,	$
+	Step:		0l,	$
+	StepCW:		0l,	$
+	StepCCW:	0l,	$
+	Angl:		0l,	$
+	Orig:		0l,	$
+	SetOrig:	0l	$
+	}
+b_0=widget_base(base, /column, /frame)
+b_1=widget_base(b_0, /row)
+lab = widget_label(b_1,value='--- '+m.name+' ---     PN: ');
+wd_emp1.PN = widget_label(b_1,value=string(m.pn,form='(i7)'),xsize=50)
+
+b_2=widget_base(b_0, /row)
+lab = widget_label(b_2,value='Vm:')
+wd_emp1.Vm = widget_text(b_2,value=string(m.vm,form='(i5)'),xsize=5,/edit)
+wd_emp1.Vm_sld = widget_slider(b_2, value=m.vm, uvalue='Vmsld', $
+		minimum=0, maximum=54000l, xsize=100,suppress=1, vertical=0, frame=50)
+lab = widget_label(b_2,value='Vs:')
+wd_emp1.Vs = widget_text(b_2,value=string(m.vs,form='(i5)'),xsize=5,/edit)
+lab = widget_label(b_2,value='Acc:')
+wd_emp1.Acc = widget_text(b_2,value=string(m.acc,form='(i3)'),xsize=3,/edit)
+b_21=widget_base(b_0, /row)
+
+b_3=widget_base(b_0, /row,ysize=23)
+lab = widget_label(b_3,value='Continuous:')
+wd_emp1.StartCW = widget_button(b_3, value="CW", uvalue = "StartCW")
+wd_emp1.StartCCW = widget_button(b_3, value="CCW", uvalue = "StartCCW")
+wd_emp1.Stop = widget_button(b_3, value="Stop", uvalue = "Stop")
+wd_emp1.Orig = widget_button(b_3, value="Orig", uvalue = "Orig")
+wd_emp1.SetOrig = widget_button(b_3, value="SetOrig", uvalue = "SetOrig")
+
+b_4=widget_base(b_0, /row,ysize=23)
+lab = widget_label(b_4,value='Step:')
+wd_emp1.Step = widget_text(b_4,value=string(m.step,form='(i6)'),xsize=6,/edit)
+wd_emp1.StepCW = widget_button(b_4, value="CW", uvalue = "StepCW")
+wd_emp1.StepCCW = widget_button(b_4, value="CCW", uvalue = "StepCCW")
+lab = widget_label(b_4,value='  Goto:')
+wd_emp1.Angl = widget_text(b_4,value='0',xsize=5,/edit)
+lab = widget_label(b_4,value='deg.')
+
+return,wd_emp1
+
+end
+
+function widget_emp, base, p
+lab = widget_label(base,value='>>> EMP400   <<<',font=2)
+b_1=widget_base(base, /column)
+wd_emp={wd_emp,	$
+	m1:	widget_emp1(b_1,p.m1), 	$
+	m2:	widget_emp1(b_1,p.m2)		$
+	}
+
+return,wd_emp
+
+end
+
+;**********************************************************************
+function emp_ctl
+
+m={emp_ctlm1, $
+	name:     '',	$ ; name of axis
+	vs:	1000l,	$ ; initial pulse rate, Hz, max=18000x3
+	vm:    18000l,	$ ; pulse rate, Hz, max=18000x3
+	acc:      30,	$ ; acceleration, [0.1ms/kHz], 5 - 10000
+	pn:	   0l, 	$ ; current position
+	angl:	   0., 	$ ; target position (deg.)
+	offset:	   0l,	$ ; axis offset from origin (pulse)
+	step:	  10l,	$ ; step for discrete motion
+	revpn: 18000l,	$ ; step # for 1 revolution
+	direc:	   0	$ ; CW/CCW
+	}
+p={emp_ctl, $
+	dev_exist:   1,	$ ; device exist(1) not not(0)
+	m1:	m, $
+	m2:	m  $
+	}
+return,p
+end

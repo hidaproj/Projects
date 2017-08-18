@@ -1,0 +1,65 @@
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/repos/devel/!svn/ver/29/Projects/IDLPRO/T3_Prosilica
+END
+T3_ObsLib.pro
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/repos/devel/!svn/ver/38/Projects/IDLPRO/T3_Prosilica/T3_ObsLib.pro
+END
+T3_CameraLib.pro
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/repos/devel/!svn/ver/38/Projects/IDLPRO/T3_Prosilica/T3_CameraLib.pro
+END
+prosilica.pro
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/repos/devel/!svn/ver/29/Projects/IDLPRO/T3_Prosilica/prosilica.pro
+END
+.project
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/repos/devel/!svn/ver/29/Projects/IDLPRO/T3_Prosilica/.project
+END
+T3_GUItest.pro
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/repos/devel/!svn/ver/38/Projects/IDLPRO/T3_Prosilica/T3_GUItest.pro
+END
+T3_GUI.pro
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/repos/devel/!svn/ver/38/Projects/IDLPRO/T3_Prosilica/T3_GUI.pro
+END
+doc_widget2.pro
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/repos/devel/!svn/ver/38/Projects/IDLPRO/T3_Prosilica/doc_widget2.pro
+END
+T3_prosilica.pro
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/repos/devel/!svn/ver/38/Projects/IDLPRO/T3_Prosilica/T3_prosilica.pro
+END
+pro_T3lib.pro
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/repos/devel/!svn/ver/35/Projects/IDLPRO/T3_Prosilica/pro_T3lib.pro
+END
+T3_ParamLib.pro
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/repos/devel/!svn/ver/38/Projects/IDLPRO/T3_Prosilica/T3_ParamLib.pro
+END

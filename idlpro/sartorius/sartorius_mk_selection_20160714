@@ -1,0 +1,81 @@
+;	sartorius.pro
+
+;	2016.01.28	t.a.
+;       2016.02.20 TTI
+;       2016.07.14 K. Otsuji for new PC (C:\->D:\)
+
+
+;=============================================
+; include
+
+
+pro sartorius_mk_selection,date=date
+
+if n_elements(date) eq 0 then begin
+caldat,systime(/JULIAN),mon,day,year,hour,minu,seco
+date=string(year,format='(i4.4)')+string(mon,format='(i2.2)')+string(day,format='(i2.2)')
+endif
+
+
+savedir='D:\data\'+date
+selecteddir='D:\data\selected\'+date 
+jpegdir='D:\data\jpeg\'+date 
+
+
+file=file_search(savedir+'\save\*cen.sav',count=nf)
+jpegfile=file_search(savedir+'\jpeg\*cen.jpeg',count=nfj)
+
+
+time=strmid(file,26,2)*60.*60.+strmid(file,28,2)*60.+strmid(file,30,2)*1.
+
+
+pos_selected=0
+
+st=time[0]
+for i=1,nf-1 do begin
+ck=time[i]
+	if ck-st ge 120 then begin 
+		pos_selected=[pos_selected,i]
+		st=ck
+	endif
+endfor
+
+nf=n_elements(pos_selected)
+print,nf
+spawn,'mkdir '+selecteddir
+spawn,'mkdir '+jpegdir
+
+for i=0,nf-1 do begin
+	spawn,'copy '+file[pos_selected[i]]+' '+selecteddir		
+	spawn,'copy '+jpegfile[pos_selected[i]]+' '+jpegdir		
+endfor
+
+
+;------------------------
+
+file=file_search(savedir+'\save\*pro.sav',count=nf)
+jpegfile=file_search(savedir+'\jpeg\*pro.jpeg',count=nfj)
+time=strmid(file,26,2)*60.*60.+strmid(file,28,2)*60.+strmid(file,30,2)*1.
+
+
+pos_selected=0
+
+st=time[0]
+for i=1,nf-1 do begin
+ck=time[i]
+	if ck-st ge 10 then begin 
+		pos_selected=[pos_selected,i]
+		st=ck
+	endif
+endfor
+
+nf=n_elements(pos_selected)
+
+for i=0,nf-1 do begin
+	spawn,'copy '+file[pos_selected[i]]+' '+selecteddir		
+	spawn,'copy '+jpegfile[pos_selected[i]]+' '+jpegdir		
+endfor
+
+
+
+end

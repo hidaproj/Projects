@@ -1,0 +1,21 @@
+;+
+; timestr.pro (function)
+;	get time string 'hh:mm:ss'  (from float time)
+;	!! un-understandable, old string is replaced by a new call ???
+;	97/09/29	k.i.
+;	98/11/11	k.i.	ftime parameter
+;-
+function timestr,ftime
+
+if n_elements(ftime) then begin
+	time_ret=string(fix(ftime),format='(i2.2)')+':' $
+		+string(fix(ftime*60) mod 60,format='(i2.2)')+':' $
+		+string(fix(ftime*3600) mod 60,format='(i2.2)')
+endif else begin
+	time1='11:11:11     '
+	dmy=call_external('c:\nkrprj\cprog\oscomdll.dll', $
+			'gettimestr',time1,value=[0d],/S_VALUE)
+	time_ret=time1
+endelse
+return,time_ret
+end

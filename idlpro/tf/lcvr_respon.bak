@@ -1,0 +1,16 @@
+; lcvr.pro
+;   LCVR response measurement
+;	2011.3.25	k.i.
+@aro_lcdriver
+lcv=[0,2,8,2,0]	; V
+dt=1.		; waiting time
+nv=n_elements(lcv)
+
+for i=0,nv-1 do begin
+	print,'v=',lcv[i]
+	setlcvolt,lcv[i],lcv[i]
+	wait,dt
+endfor
+
+
+end

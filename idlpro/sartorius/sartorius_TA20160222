@@ -1,0 +1,304 @@
+;	sartorius.pro
+
+;	2016.01.28	t.a.
+;	2016.02.19	t.a.
+
+
+;=============================================
+; include
+@makolib
+
+
+;=============================================
+pro sartorius_event, ev
+;---------------------------------------------
+common widget,wp,wd,p
+
+widget_control,ev.id,get_uvalue=uvalue,get_value=value
+ev_stop=widget_event(wd.stop,/nowait)
+ev_exptime=widget_event(wd.exptime,/nowait)
+ev_prevst=widget_event(wd.prevst,/nowait)
+ev_savest=widget_event(wd.savest,/nowait)
+ev_topname=widget_event(wd.topname,/nowait)
+ev_exit=widget_event(wd.exit,/nowait)
+
+case uvalue of
+	'exptime':begin
+		skip_exptime:
+		wp.p.EXPTIME=float(value)>41.<153000000.
+		set_parameters,wp.p
+		widget_control,wd.exptime,set_value=string(float(wp.p.EXPTIME),format='(i8)')
+
+		print,''
+		print,'set exposure time', wp.p.EXPTIME
+	end
+	'cadence':begin
+		wp.cadence=float(value)
+		widget_control,wd.cadence,set_value=string(float(wp.cadence),format='(i8)')
+
+		print,''
+		print,'set cadence', wp.cadence
+	end
+	'topname':begin
+		skip_topname:
+		wp.topname=strcompress(string(value),/remove_all)
+		widget_control,wd.topname,set_value=wp.topname
+
+		print,''
+		print,'set filename'
+	end
+	'prevst':begin
+		skip_prevst:
+		print,'preview start'
+		window,0,xs=wp.wx,ys=wp.wy
+		!p.multi=0
+		loadct,0
+		wp.p.NAXIS3=1
+		img=uintarr(wp.p.NAXIS1,wp.p.NAXIS2)
+
+		widget_control,wd.status,set_value='preview now'
+
+		i=0l
+		;while ev_prev_stop.id eq 0 do begin
+		while 	(ev_stop.id eq 0) and 	$
+			(ev_exptime.id eq 0) and 	$
+			(ev_savest.id eq 0) and 	$
+			(ev_topname.id eq 0) and 	$
+			(ev_exit.id eq 0)  	$
+			 do begin
+
+			
+			imgs=mako_obs(wp.p,img,header=0)
+			if n_elements(imgs) eq 1 then goto,toexit
+
+			imgs=rotate(imgs,7)
+			tvscl,rebin(imgs,wp.wx,wp.wy)
+			;xyouts,/norm,0.05,0.85,'preview now',charsize=5,color=255
+			if max(imgs) eq (2.^12 -1) then xyouts,/norm,0.05,0.5,'saturate!!',charsize=5,color=255
+
+			;xx=findgen(101)/100.*(2.^12 -1)
+			;plot,xx,histogram(imgs,min=0,max=(2.^12 -1),nbin=100)>0.1,ylog=1,xstyle=1,	$
+			;	yr=[1,max(histogram(imgs,min=0,max=(2.^12 -1),nbin=100))],	$
+			;	noerase=1,norm=1,pos=[0.1,0.1,0.3,0.3],charsize=0.2,	$
+			;	xtickname=replicate(' ',10),ytickname=replicate(' ',10)
+	
+			ev_stop=widget_event(wd.stop,/nowait)
+			ev_exptime=widget_event(wd.exptime,/nowait)
+			ev_prevst=widget_event(wd.prevst,/nowait)
+			ev_savest=widget_event(wd.savest,/nowait)
+			ev_topname=widget_event(wd.topname,/nowait)
+			ev_exit=widget_event(wd.exit,/nowait)
+
+			if (ev_exptime.id ne 0) or (ev_savest.id ne 0) or $
+				(ev_topname.id ne 0) or (ev_exit.id ne 0) then begin
+				;print,'preview stop'
+				;img=0
+				;imgs=0
+				;ev_emp=widget_event(/nowait)
+				;widget_control,ev.id,get_uvalue=uvalue,get_value=value
+				if (ev_exptime.id ne 0) then print,'set exposure again';goto,skip_exptime
+				if (ev_savest.id ne 0) then print,'start save again';goto,skip_prevst
+				if (ev_topname.id ne 0) then print,'set name again';goto,skip_topname
+				if (ev_exit.id ne 0) then print,'exit again'; goto,skip_exit
+			endif
+			ev_emp=widget_event(/nowait)
+			i=i+1
+		endwhile
+		tvscl,rebin(imgs,wp.wx,wp.wy)
+		;xyouts,/norm,0.05,0.85,'preview stop',charsize=5,color=255
+		widget_control,wd.status,set_value='preview stop'
+
+		img=0
+		imgs=0
+		print,'preview stop'
+	end
+	'savest':begin
+		skip_savest:
+		print,'save start'
+		window,0,xs=wp.wx,ys=wp.wy
+		!p.multi=0
+		loadct,0
+		wp.p.NAXIS3=1
+		img=uintarr(wp.p.NAXIS1,wp.p.NAXIS2)
+		widget_control,wd.status,set_value='saving now'
+
+		while 	(ev_stop.id eq 0) and 	$
+			(ev_exptime.id eq 0) and 	$
+			(ev_prevst.id eq 0) and 	$
+			(ev_topname.id eq 0) and 	$
+			(ev_exit.id eq 0) 	$
+			 do begin
+
+			caldat,systime(/JULIAN),mon,day,year,hour1,minu1,seco1
+
+			imgs=mako_obs(wp.p,img,header=header)
+			if n_elements(imgs) eq 1 then goto,toexit
+
+			imgs=rotate(imgs,7)
+			caldat,systime(/JULIAN,/UTC),mon,day,year,hour,minu,seco
+			filename=wp.savedir+'save\'+ string(mon,format='(i2.2)')+	$
+				string(day,format='(i2.2)')+	$
+				string(hour,format='(i2.2)')+	$
+				string(minu,format='(i2.2)')+	$
+				string(seco,format='(i2.2)')+	$
+				'FBin'+string(wp.p.FGBINX,format='(i1.1)')+'Bit12'+$
+				wp.topname+'.sav'
+
+			save,imgs,header,file=filename
+			tvscl,rebin(imgs,wp.wx,wp.wy)
+			if max(imgs) eq (2.^12 -1) then xyouts,/norm,0.05,0.5,'saturate!!',charsize=5,color=255
+			;xyouts,/norm,0.05,0.05,'saved '+filename
+
+			set_plot,'z'
+			device,set_resolution=[2048,2048]
+			tvscl,imgs
+
+			filename=wp.savedir+'jpeg\'+ string(mon,format='(i2.2)')+	$
+				string(day,format='(i2.2)')+	$
+				string(hour,format='(i2.2)')+	$
+				string(minu,format='(i2.2)')+	$
+				string(seco,format='(i2.2)')+	$
+				'FBin'+string(wp.p.FGBINX,format='(i1.1)')+'Bit12'+$
+				wp.topname+'.jpeg'
+			write_jpeg,filename,tvrd(),quality=50
+			set_plot,'WIN'
+
+			ev_stop=widget_event(wd.stop,/nowait)
+			ev_exptime=widget_event(wd.exptime,/nowait)
+			ev_prevst=widget_event(wd.prevst,/nowait)
+			ev_savest=widget_event(wd.savest,/nowait)
+			ev_topname=widget_event(wd.topname,/nowait)
+			ev_exit=widget_event(wd.exit,/nowait)
+				if (ev_exptime.id ne 0) then print,'set exposure again';goto,skip_exptime
+				if (ev_prevst.id ne 0) then print,'start preview again';goto,skip_prevst
+				if (ev_topname.id ne 0) then print,'set name again';goto,skip_topname
+				if (ev_exit.id ne 0) then print,'exit again'; goto,skip_exit
+			ev_emp=widget_event(/nowait)
+
+			caldat,systime(/JULIAN),mon,day,year,hour2,minu2,seco2
+			;interval=(float(hour2)*60.*60.+float(minu2)*60.+float(seco2)) - $
+			;	(float(hour1)*60.*60.+float(minu1)*60.+float(seco1))
+			;wait,(wp.cadence-interval)>0.01
+			wait,0.1
+		endwhile
+		if (ev_exptime.id eq 1) then goto,skip_exptime
+		if (ev_prevst.id eq 1) then goto,skip_prevst
+		if (ev_topname.id eq 1) then goto,skip_topname
+		if (ev_exit.id eq 1) then goto,skip_exit
+
+		;xyouts,/norm,0.05,0.85,'save stop',charsize=5,color=255
+		widget_control,wd.status,set_value='save stop'
+
+		img=0
+		imgs=0
+		print,'save stop'
+	end
+	'exit':begin
+		toexit:
+		skip_exit:
+		mako_fin
+		wdelete,0
+		widget_control,/destroy, ev.top
+	end
+	else:print,'no uvalue'
+endcase
+
+END
+;=============================================
+pro sartorius
+;---------------------------------------------
+common widget,wp,wd,p
+
+
+caldat,systime(/JULIAN),mon,day,year,hour,minu,seco
+p=mako_init()
+if p.status eq 0 then goto,jump
+
+wp={widget_param,		$
+	p:		p,	$
+	topname:	'cen',	$
+	savedir:	'C:\data\'+string(year,format='(i4.4)')+	$
+			string(mon,format='(i2.2)')+			$
+			string(day,format='(i2.2)')+'\',			$
+	wx:		2048/4,	$
+	wy:		2048/4,	$
+	status:		' ',	$
+	cadence:	2.	$
+	}
+wd={wd_cdio,			$
+	exptime:	0l,	$
+	cadence:	0l,	$
+	prevst:		0l,	$
+	;preven:		0l,	$
+	savest:		0l,	$
+	;saveen:		0l,	$
+	stop:		0l,	$
+	topname:	0l,	$
+	status:		0l,	$
+	exit:		0l	$
+	}
+set_parameters,wp.p
+if is_dir(wp.savedir) eq 0 then	spawn,'mkdir '+wp.savedir
+if is_dir(wp.savedir+'save\') eq 0 then	spawn,'mkdir '+wp.savedir+'save\'
+if is_dir(wp.savedir+'jpeg\') eq 0 then	spawn,'mkdir '+wp.savedir+'jpeg\'
+
+
+xsize=300
+ysize=30
+fnt='HGënâpäpÉSÉVÉbÉNUB*BOLD*20'
+fntsmall='HGënâpäpÉSÉVÉbÉNUB*BOLD*10'
+
+main=widget_base(title='SARTORIUS Ha observation',/column,xsize=xsize*.9)
+
+ base1=widget_base(main,/row)
+  lab=widget_label(base1,value='EXPO TIME ',	$
+	units=0,xsize=xsize/3.,ysize=ysize,FONT=fnt,xoffset=0,yoffset=0)
+  wd.exptime=widget_text(base1,value=string(wp.p.EXPTIME,format='(i8)'),edit=1,	$
+	units=0,xsize=xsize/36.,ysize=ysize/80.,uvalue='exptime',FONT=fnt)
+  lab=widget_label(base1,value=' usec',	$
+	units=0,xsize=xsize/3.,ysize=ysize,FONT=fnt,xoffset=0,yoffset=0)
+
+; base1_1=widget_base(main,/row)
+;  lab=widget_label(base1_1,value='CADENCE ',	$
+;	units=0,xsize=xsize/3.,ysize=ysize,FONT=fnt,xoffset=0,yoffset=0)
+;  wd.cadence=widget_text(base1_1,value=string(wp.cadence,format='(i8)'),edit=1,	$
+;	units=0,xsize=xsize/36.,ysize=ysize/80.,uvalue='cadence',FONT=fnt)
+;  lab=widget_label(base1_1,value=' sec',	$
+;	units=0,xsize=xsize/3.,ysize=ysize,FONT=fnt,xoffset=0,yoffset=0)
+
+ base2=widget_base(main,/row)
+  wd.prevst=widget_button(base2,uvalue='prevst',value='PREVIEW',/align_center,xsize=xsize/3.5,FONT=fnt)
+  wd.stop=widget_button(base2,uvalue='stop',value='STOP',/align_center,xsize=xsize/3.5,FONT=fnt)
+  wd.savest=widget_button(base2,uvalue='savest',value='SAVE',/align_center,xsize=xsize/3.5,FONT=fnt)
+
+ base3=widget_base(main,/row)
+  lab=widget_label(base3,value=' ',	$
+	units=0,xsize=xsize,ysize=ysize/2.,FONT=fnt10,xoffset=0,yoffset=0)
+
+ base4=widget_base(main,/row)
+  lab=widget_label(base4,value='FOLDER       '+wp.savedir,	$
+	units=0,xsize=xsize,ysize=ysize*.5,FONT=fnt10,xoffset=0,yoffset=0)
+
+ base5=widget_base(main,/row)
+  lab=widget_label(base5,value='FILENAME  mmddhhmmssFBin1Bit12',	$
+	units=0,ysize=ysize*.5,FONT=fnt10,xoffset=0,yoffset=0)
+  wd.topname=widget_text(base5,value=wp.topname,edit=1,	$
+	units=0,xsize=xsize/50.,ysize=ysize/80.,uvalue='topname',FONT=fnt10)
+  lab=widget_label(base5,value='.sav',	$
+	units=0,xsize=xsize,ysize=ysize*.5,FONT=fnt10,xoffset=0,yoffset=0)
+ 
+ base6=widget_base(main,/row)
+  lab=widget_label(base6,value=' ',	$
+	units=0,xsize=xsize,ysize=ysize/2.,FONT=fnt10,xoffset=0,yoffset=0)
+
+ base7=widget_base(main,/row)
+  wd.status=widget_text(base7,value=wp.status,edit=0,	$
+	units=0,xsize=xsize,ysize=ysize/80.,uvalue='status',FONT=fnt10)
+
+
+wd.exit=widget_button(main,value='EXIT',uvalue='exit')
+widget_control,main,/realize
+xmanager,'sartorius',main,modal=modal
+
+jump:
+END

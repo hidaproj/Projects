@@ -1,0 +1,91 @@
+; ircam_get.pro
+;   record burst images from IR camera
+;	2008.11.13	k.i.
+;	2009.1.22	k.i.,T.A.	DST angle to header
+;	2009.2.2	k.i.,T.A.	wave plate trigger
+@usb1024lib
+
+nx=640 &	ny=512
+init_usb1024
+
+;-----------------------------------------------------------------------
+outfile_path='C:\data\dst\20090205\'
+nimg=100		; # of image 
+;expo=50		; exposure, msec
+;fnam='he_'
+
+expo=100		; exposure, msec
+fnam='he_'
+
+gain=3
+fov='full'  &	x1=0 &	y1=0 	&	nxp=nx &	nyp=ny
+;fov='roi'  &	x1=0 &	y1=100 	&	nxp=640 &	nyp=240
+;fov='roi'  &	x1=50 &	y1=50 	&	nxp=100 &	nyp=100
+;-----------------------------------------------------------------------
+
+window,0,xs=nx,ys=ny
+;---------- start cap ----------;
+  m_hCam=call_external(dllfile,'startcap',m_hCam,expo,gain,/all_value,/cdecl)
+
+;================================== add 2008/10/20
+  rr=call_external(dllfile,'initboard',/all_value,/cdecl)
+  rr=call_external(dllfile,'InitParam',nimg,/all_value,/cdecl)
+  rr=call_external(dllfile,'AllocMemory',/all_value,/cdecl)
+;-=================================
+dstangl,hangl,zd
+
+h=nkrhead()
+h.OBSERVATORY='Hida'
+h.TELESCOPE='DST'
+h.OBS_MODE=1
+h.TIME_SYS='JST'
+h.EXP=expo/10
+h.INTEG=1
+h.PROG='ircam_get'
+h.nx=nxp &	h.ny=nyp
+h.pix_x1=x1 &	h.pix_y1=y1
+h.nbyt=2
+h.data_type=2
+h.nf=nimg
+h.hangle=hangl
+h.delta=zd
+img1=intarr(nx,ny,nimg)
+ans=''
+;fnam=dialog_input(prompt='OUT FILE NAME: <ok for start>')
+;outfile=outfile_path+fnam+'.dat'
+;fnam='he_'
+
+print,'Start?' &	read,ans
+
+;for k=0,3 do begin
+;print,k
+wp_orig,time1 &	print,time1
+print,'Start data acquisition..' &	print,''
+	caldat,systime(/JULIAN), mon , day , year , hour , minu , seco
+	h.DATE1=strmid(strtrim(year,2),2,2)+'/'+strtrim(mon,2)+'/'+strtrim(day,2)	; "yy/mm/dd"
+	h.TIME1=strtrim(hour,2)+':'+strtrim(minu,2)+':'+strmid(strtrim(seco,2),0,6)	; "hh:mm:ss.sss"
+	mm=call_external(dllfile,'get_img',img1,value=[0b],/cdecl)
+	caldat,systime(/JULIAN), mon , day , year , hour , minu , seco
+	h.DATE2=strmid(strtrim(year,2),2,2)+'/'+strtrim(mon,2)+'/'+strtrim(day,2)	; "yy/mm/dd"
+	h.TIME2=strtrim(hour,2)+':'+strtrim(minu,2)+':'+strmid(strtrim(seco,2),0,6)	; "hh:mm:ss.sss"
+	imgs=uint(img1[x1:x1+nxp-1,y1:y1+nyp-1,*])
+
+	for i=0,nimg-1 do begin
+		tvscl,img1(*,*,i)
+		xyouts,10,10,string(i),/dev,size=3
+		draw,[x1,x1+nxp,x1+nxp,x1,x1],[y1,y1,y1+nyp,y1+nyp,y1]
+	endfor
+	yyyymmdd_hhmmss=string(year,form='(i4.4)')+string(mon,form='(i2.2)')+string(day,form='(i2.2)') $
+		+'_'+string(hour,form='(i2.2)')+string(minu,form='(i2.2)')+string(seco,form='(i2.2)')
+	outfile=outfile_path+fnam+yyyymmdd_hhmmss+'.dat'
+	nkrsave,outfile,h,imgs
+	print,outfile
+
+;endfor
+
+rr=call_external(dllfile,'ReleaseMemory',/all_value,/cdecl)
+rr=call_external(dllfile,'closeboard',/all_value,/cdecl)
+
+;delvar,imgs
+
+end

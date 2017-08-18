@@ -1,0 +1,10 @@
+dir='C:\data\dst\20110216\'
+
+file1=dir+''
+file2=dir+''
+
+res=ta_ta_nomoduscat(file1,file2)
+
+
+
+END

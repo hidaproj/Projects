@@ -1,0 +1,120 @@
+;  mscan.pro
+;  scan observation with scanning mirror on PAT-001
+@scanmlib
+
+;** MODIFICATION HISTORY **
+function version
+ver='1.0'	; '08/07/12	k.i. 
+ver='1.1'	; '09/05/06	k.i.   from gscan.pro
+
+return,ver
+end
+
+;*************************************************************************
+;NAME       : mscan event handler (procedure)
+;FUNCTION   : DST observation
+;PROGRAMMER : k.i. 
+; ========================================================================
+pro mscan_event, eve
+
+common mscan_com, p, wd, h, img
+
+widget_control, eve.id, get_uvalue=value
+if (n_elements(value) eq 0) then value = ''
+name = strmid(tag_names(eve, /structure_name), 7, 1000)
+;print,'tag=',name,'  value=',value
+;help,eve,/st
+
+
+;--------------- MK-5 control -----------------------------
+l=wd.gb
+wid_gb=[l.Pos_txt,l.Pos_set,l.MkStat,l.Origin,	$
+	l.Swing_Start,l.Swing_Stop,l.Swing_Ampl, $
+	l.Swing_Speed1,l.Swing_Speed2,l.Trig,l.Exit]
+i = where(eve.id eq wid_gb)
+if i(0) ne -1 then begin
+	dmy = sm_event( eve, wd.gb )
+	return
+endif
+
+
+;--------------- Obs control -----------------------------
+case (eve.id) of
+    wd.obs.Start: begin
+	print,'Obs. Start..'
+	return
+	end
+    wd.obs.Stop: begin
+	print,'Obs. Stop..'
+	return
+	end
+    wd.obs.Exit: begin
+	WIDGET_CONTROL, /destroy, eve.top
+	return
+	end
+    else: 
+endcase
+
+return
+
+Term:	; terminate scan
+	print,'Scan terminated...'
+    	smp=smpos(0,/gwait)
+	wdg_set,wd.gb,pos=smp
+	return
+
+
+end
+
+;*************************************************************************
+function widget_obs,base
+;-------------------------------------------------------------------------
+;   	create widget for controling Observation
+;	return widget ID in wd_obs
+;  base     ---  base window
+
+wd_obs={wd_obs,	$
+	Start:		0l,	$
+	Stop:		0l,	$
+	Exit:		0l	$
+	}
+;--------------  Obs setting ---------------
+lab = widget_label(base,value='>> Observation <<',font=2)
+b_obs = widget_base(base, /row, /frame )	
+   	wd_obs.Start = widget_button(b_obs, value="Start", uvalue = "START")
+   	wd_obs.Stop = widget_button(b_obs, value="Stop", uvalue = "STOP")
+   	wd_obs.Exit = widget_button(b_obs, value="Exit", uvalue = "EXIT")
+
+return,wd_obs
+end
+
+;*************************************************************************
+;NAME       : mscan (main)
+;FUNCTION   : DST observation
+; ========================================================================
+;pro mscan
+
+common mscan_com, p, wd, h, img
+common scanmlib,SwAmp,Pos,aspp,Speeds,Trig
+
+
+;-------  get setting parameters and initilize system  ------------
+sminit,ComInit	; after execution, ComInit is set to 1
+dpn=1./aspp
+print,'1arcsec=',dpn,'pulse'
+
+;-------  create widgets and get ID structure  ---------------------------
+base = WIDGET_BASE(title='Hida DST Scan Mirr Obs. (Ver.'+version()+')', /column) 
+;wd_obs = widget_obs(base)
+wd_gb  = widget_gb(base)
+wdg_set,wd_gb,SwAmp=128
+wd = {widgets,	$	;---- widgets
+	gb:	wd_gb	$
+;	obs:	wd_obs	$
+	}
+widget_control, base, /realize
+XMANAGER, 'mscan', base
+
+;-------  end procedures  ------------------------------------------------
+
+end

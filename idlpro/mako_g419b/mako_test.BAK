@@ -1,0 +1,33 @@
+pro mako_test,imgs
+
+dllfile='C:\projects\cprog\VS2010\mako_g419b\x64\Debug\mako_g419b.dll'
+nimg=2l
+etime=1000000l
+gain=20l
+;binx=2l
+;biny=2l
+;width=2048l/binx
+;height=2048l/biny
+;regionx=0l
+;regiony=0l
+
+;r=call_external(dllfile,'test')
+r=call_external(dllfile,'CamInit')
+;r=call_external(dllfile,'SetParam',etime,gain,binx,biny,width,height,regionx,regiony,/all_value,/cdecl)
+r=call_external(dllfile,'SetParam',etime,gain,/all_value,/cdecl)
+r=call_external(dllfile,'GrabImg',nimg,/all_value,/cdecl)
+img=uintarr(width,height)
+imgs=uintarr(width,height,nimg)
+for i=0,nimg-1 do begin
+	r=call_external(dllfile,'DivBuf',i,/all_value,/cdecl)
+	r=call_external(dllfile,'GoIdl',img)
+	imgs[*,*,i]=img
+endfor
+
+
+r=call_external(dllfile,'CamFin')
+
+help,img
+
+
+END

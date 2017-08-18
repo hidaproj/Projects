@@ -1,0 +1,155 @@
+;PRO T3_ObsLib
+;+
+;
+;  T3_ObsLib.pro
+;
+;Functions for observation
+;based on DST Poralization scripts by T. Anan
+;
+;20100512  T.K.
+;
+;
+;
+;========================headder==============================;
+;pro pro_preview,img
+;function gettime
+;function NormalObs
+;pro MessageBox,msg
+;function timestamp1,file
+;
+;
+;-
+
+;========================include==============================;
+@T3_CameraLib
+;=========================main================================;
+
+
+;**************************************************************
+pro pro_preview,img
+;--------------------------------------------------------------
+common T3_ParamLib
+
+prodll='C:\Projects\cprog\VS2008\prosilica\Debug\prosilica.dll'
+
+
+r=call_external(prodll,'GrabImg',1,/all_value,/cdecl)
+r=call_external(prodll,'DivBuf',0,/all_value,/cdecl)
+r=call_external(prodll,'GoIdl',img,/cdecl)
+
+tvscl,img
+
+end
+
+
+;**************************************************************
+function gettime
+;--------------------------------------------------------------
+common T3_ParamLib
+
+cd,'C:\Projects\cprog\VS2008\prosilica'
+prodll='C:\Projects\cprog\VS2008\prosilica\Debug\prosilica.dll'
+
+caldat,systime(/JULIAN), mon , day , year , hour , minu , seco
+second=string(seco,form='(i2.2)') & second0=second
+while (second eq second0) do begin
+  caldat,systime(/JULIAN), mon , day , year , hour , minu , seco
+  second=string(seco,form='(i2.2)')
+endwhile
+
+msec0=call_external(prodll,'getime',/all_value,/cdecl)
+
+
+caldat,systime(/JULIAN), mon , day , year , hour , minu , seco
+yyyymmdd_hhmmss=string(year,form='(i4.4)')+string(mon,form='(i2.2)')+string(day,form='(i2.2)') $
+  +'_'+string(hour,form='(i2.2)')+string(minu,form='(i2.2)')+string(seco,form='(i2.2)')
+msec=call_external(prodll,'getime',/all_value,/cdecl)
+
+time0=msec-msec0
+length=strlen(string(time0))
+msec=strmid(string(time0),(length-3),3)
+
+time=yyyymmdd_hhmmss+msec
+return,time
+
+end
+
+
+;**************************************************************
+function NormalObs
+;--------------------------------------------------------------
+;common T3_ParamLib
+
+prodll='C:\Projects\cprog\VS2008\prosilica\Debug\prosilica.dll'
+
+tmp='                                                             '
+
+wp={widget_param, $
+    wavelength: '6000',       $   ; wave length observed [A]
+    expo:        50l,         $   ; exposure time [usec]
+    gain:        0,           $   ; gain 0�`28
+    nimg:        100,         $   ;  # of image 
+    binx:        2,           $   ; Binning X 1�`8
+    biny:        2,           $   ; Binning Y 1�`1200
+    Height:      600,         $   ; Height  max=1200 (biny=1)
+    Width:       800,         $   ; Width  max=1600 (binx=1)
+    RegionX:     0,           $   ; start of region read out,pixel,left edge
+    RegionY:     0,           $   ; start of region read out,pixel,top edge
+    clock:       79861111l,  $   ; TimeStanmpFrequency [Hz]
+    timelo:      0,           $   ; Time stamp, lower 32-bits
+    timehi:      0,           $   ; Time stamp, upper 32-bits
+    svdir:       'C:\Projects\IDLPRO\test_tk', $   ; save directory
+    fname:       'fname',     $   ; head of file name 
+    nf:          2,           $   ; number of files
+    input:       tmp,         $   ; contec cdio input �@�����j�^�[�v�̕����񃁃����i�H�j
+    output:      tmp,         $   ; contec cdio output�@����m�ۂ���K�v����
+    r_m:         ' ',         $   ; RADIUS [arcmin]
+    r_s:         ' ',         $   ; RADIUS [arcsec]
+    p_d:         ' ',         $   ; POLAR ANGLE [arcdeg]
+    p_m:         ' ',         $   ; POLAR ANGLE [arcmin]
+    i_d:         ' ',         $   ; INCLINATION [arcdeg]
+    i_m:         ' ',         $   ; INCLINATION [arcmin]
+    i_s:         ' ',         $   ; INCLINATION [arcsec]
+    n_evsample:  0l           $   ; omake
+   }
+
+T3_CamInit
+T3_CamSetParam
+sttime=gettime()
+T3_GrubImg
+entime=gettime()
+savefits,'NORMAL','',sttime,entime
+savestmpfits,sttime
+T3_CamFin
+
+filename=wp.svdir+wp.fname+sttime+'.fits'
+return,filename
+
+end
+
+;**************************************************************
+pro MessageBox,msg
+;--------------------------------------------------------------
+;common T3_ParamLib
+prodll='C:\Projects\cprog\VS2008\prosilica\Debug\prosilica.dll'
+
+r=call_external(prodll,'CamOpen', msg, /PORTABLE )
+
+end
+
+;**************************************************************
+function timestamp1,file
+;--------------------------------------------------------------
+common T3_ParamLib
+
+mreadfits,file,h,dt
+
+res=dblarr(h.EN_NO-h.ST_NO+1)
+for i=h.ST_NO,h.EN_NO do begin
+  res[i]=(dt[i,0]*2.^32.+dt[i,1])*1./(h.STMP_HZ*1.) ;[sec]
+endfor
+
+return,res
+
+end
+

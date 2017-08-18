@@ -1,0 +1,15 @@
+; read new10cm Ha jpeg file with nkr header
+;	2007.8.11	k.i.
+
+pro p10get,file,h,img
+
+read_jpeg,file,img
+openr,1,file
+l=fstat(1)
+point_lun,1,l.size-512
+h=nkrhead()
+readu,1,h
+close,1
+
+
+end

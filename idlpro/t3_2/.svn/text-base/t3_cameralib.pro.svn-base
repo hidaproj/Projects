@@ -1,0 +1,283 @@
+;PRO T3_CameraLib
+;+
+;
+;  T3_CameraLib
+;
+;Functions for camera (prosillica)
+;based on DST Poralization scripts by T. Anan
+;
+;20100512  T.K.
+;
+;========================headder==============================;
+;pro T3_CamInit
+;pro T3_CamFin
+;pro T3_CamSetParam
+;pro T3_GrubImg
+;pro savefits,obs,pol,sttime,entime
+;pro savestmpfits,sttime
+;
+;-
+
+;========================include==============================;
+@T3_ParamLib
+;==========================main===============================;
+
+;**************************************************************
+PRO T3_CamInit
+;--------------------------------------------------------------
+common T3_ParamLib,prodll
+
+cd,'C:\Projects\cprog\VS2008\prosilica'
+
+prodll='C:\Projects\cprog\VS2008\prosilica\Debug\prosilica.dll'
+
+err=call_external(prodll,'CamInit',/all_value,/cdecl)
+
+
+END
+
+;**************************************************************
+PRO T3_CamFin
+;--------------------------------------------------------------
+common T3_ParamLib,prodll
+
+err=call_external(prodll,'CamFin',/all_value,/cdecl)
+
+END
+
+;**************************************************************
+PRO T3_CamSetParam
+;--------------------------------------------------------------
+common T3_ParamLib,wp
+
+prodll='C:\Projects\cprog\VS2008\prosilica\Debug\prosilica.dll'
+
+tmp='                                                             '
+
+wp={widget_param, $
+    wavelength: '6000',       $   ; wave length observed [A]
+    expo:        50l,         $   ; exposure time [usec]
+    gain:        0,           $   ; gain 0�`28
+    nimg:        100,         $   ;  # of image 
+    binx:        2,           $   ; Binning X 1�`8
+    biny:        2,           $   ; Binning Y 1�`1200
+    Height:      600,         $   ; Height  max=1200 (biny=1)
+    Width:       800,         $   ; Width  max=1600 (binx=1)
+    RegionX:     0,           $   ; start of region read out,pixel,left edge
+    RegionY:     0,           $   ; start of region read out,pixel,top edge
+    clock:       79861111l,  $   ; TimeStanmpFrequency [Hz]
+    timelo:      0,           $   ; Time stamp, lower 32-bits
+    timehi:      0,           $   ; Time stamp, upper 32-bits
+    svdir:       'C:\Projects\IDLPRO\test_tk', $   ; save directory
+    fname:       'fname',     $   ; head of file name 
+    nf:          2,           $   ; number of files
+    input:       tmp,         $   ; contec cdio input �@�����j�^�[�v�̕����񃁃����i�H�j
+    output:      tmp,         $   ; contec cdio output�@����m�ۂ���K�v����
+    r_m:         ' ',         $   ; RADIUS [arcmin]
+    r_s:         ' ',         $   ; RADIUS [arcsec]
+    p_d:         ' ',         $   ; POLAR ANGLE [arcdeg]
+    p_m:         ' ',         $   ; POLAR ANGLE [arcmin]
+    i_d:         ' ',         $   ; INCLINATION [arcdeg]
+    i_m:         ' ',         $   ; INCLINATION [arcmin]
+    i_s:         ' ',         $   ; INCLINATION [arcsec]
+    n_evsample:  0l           $   ; omake
+   }
+   
+
+p={prosilica_param,   $
+   expo:         wp.expo,          $   ; exposure time [msec]
+   gain:         wp.gain,          $   ; gain 0�`28
+   nimg:         wp.nimg,          $   ;  # of images
+   binx:         wp.binx,          $   ; Binning X 1�`8
+   biny:         wp.biny,          $   ; Binning Y 1�`1200
+   Height:       wp.Height,        $   ; Height  max=1200 (biny=1)
+   Width:        wp.Width,         $   ; Width  max=1600 (binx=1)
+   RegionX:      wp.RegionX,       $   ; start of region read out,pixel,left edge
+   RegionY:      wp.RegionY,       $   ; start of region read out,pixel,top edge
+   clock:        wp.clock,         $   ; TimeStanmpFrequency [Hz]
+   timelo:       wp.timelo,        $   ; Time stamp, lower 32-bits
+   timehi:       wp.timehi,        $   ; Time stamp, upper 32-bits
+   n_evsample:   wp.n_evsample     $   ; omake
+}
+
+help,p,/st
+
+err=call_external(prodll,'SetParam',    $
+                            wp.expo,    $
+                            wp.gain,    $
+                            wp.binx,    $
+                            wp.biny,    $
+                            wp.Width,   $
+                            wp.Height,  $
+                            wp.RegionX, $
+                            wp.RegionY, $
+                            /all_value,/cdecl)
+
+END
+
+;**************************************************************
+PRO T3_GrubImg
+;--------------------------------------------------------------
+common T3_ParamLib,prodll
+
+prodll='C:\Projects\cprog\VS2008\prosilica\Debug\prosilica.dll'
+
+
+tmp='                                                             '
+
+wp={widget_param, $
+    wavelength: '6000',       $   ; wave length observed [A]
+    expo:        50l,         $   ; exposure time [usec]
+    gain:        0,           $   ; gain 0�`28
+    nimg:        100,         $   ;  # of image 
+    binx:        2,           $   ; Binning X 1�`8
+    biny:        2,           $   ; Binning Y 1�`1200
+    Height:      600,         $   ; Height  max=1200 (biny=1)
+    Width:       800,         $   ; Width  max=1600 (binx=1)
+    RegionX:     0,           $   ; start of region read out,pixel,left edge
+    RegionY:     0,           $   ; start of region read out,pixel,top edge
+    clock:       79861111l,  $   ; TimeStanmpFrequency [Hz]
+    timelo:      0,           $   ; Time stamp, lower 32-bits
+    timehi:      0,           $   ; Time stamp, upper 32-bits
+    svdir:       'C:\Projects\IDLPRO\test_tk', $   ; save directory
+    fname:       'fname',     $   ; head of file name 
+    nf:          2,           $   ; number of files
+    input:       tmp,         $   ; contec cdio input �@�����j�^�[�v�̕����񃁃����i�H�j
+    output:      tmp,         $   ; contec cdio output�@����m�ۂ���K�v����
+    r_m:         ' ',         $   ; RADIUS [arcmin]
+    r_s:         ' ',         $   ; RADIUS [arcsec]
+    p_d:         ' ',         $   ; POLAR ANGLE [arcdeg]
+    p_m:         ' ',         $   ; POLAR ANGLE [arcmin]
+    i_d:         ' ',         $   ; INCLINATION [arcdeg]
+    i_m:         ' ',         $   ; INCLINATION [arcmin]
+    i_s:         ' ',         $   ; INCLINATION [arcsec]
+    n_evsample:  0l           $   ; omake
+   }
+
+
+err=call_external(prodll,'GrabImg',wp.nimg,/all_value,/cdecl)
+
+END
+
+;**************************************************************
+PRO savefits,obs,pol,sttime,entime
+;--------------------------------------------------------------
+;common T3_ParamLib,prodll
+;common T3_ParamLib,wp
+
+prodll='C:\Projects\cprog\VS2008\prosilica\Debug\prosilica.dll'
+tmp='                                                             '
+
+wp={widget_param, $
+    wavelength: '6000',       $   ; wave length observed [A]
+    expo:        50l,         $   ; exposure time [usec]
+    gain:        0,           $   ; gain 0�`28
+    nimg:        100,         $   ;  # of image 
+    binx:        2,           $   ; Binning X 1�`8
+    biny:        2,           $   ; Binning Y 1�`1200
+    Height:      600,         $   ; Height  max=1200 (biny=1)
+    Width:       800,         $   ; Width  max=1600 (binx=1)
+    RegionX:     0,           $   ; start of region read out,pixel,left edge
+    RegionY:     0,           $   ; start of region read out,pixel,top edge
+    clock:       79861111l,  $   ; TimeStanmpFrequency [Hz]
+    timelo:      0,           $   ; Time stamp, lower 32-bits
+    timehi:      0,           $   ; Time stamp, upper 32-bits
+    svdir:       'C:\Projects\IDLPRO\test_tk', $   ; save directory
+    fname:       'fname',     $   ; head of file name 
+    nf:          2,           $   ; number of files
+    input:       tmp,         $   ; contec cdio input �@�����j�^�[�v�̕����񃁃����i�H�j
+    output:      tmp,         $   ; contec cdio output�@����m�ۂ���K�v����
+    r_m:         ' ',         $   ; RADIUS [arcmin]
+    r_s:         ' ',         $   ; RADIUS [arcsec]
+    p_d:         ' ',         $   ; POLAR ANGLE [arcdeg]
+    p_m:         ' ',         $   ; POLAR ANGLE [arcmin]
+    i_d:         ' ',         $   ; INCLINATION [arcdeg]
+    i_m:         ' ',         $   ; INCLINATION [arcmin]
+    i_s:         ' ',         $   ; INCLINATION [arcsec]
+    n_evsample:  0l           $   ; omake
+   }
+
+
+outfile=wp.svdir+wp.fname+sttime+'.fits'
+print,outfile 
+
+hangle=0l & zd=0l
+;if (obs ne 'NORMAL') then dstangl,hangl,zd
+;  dstangl,hangl,zd
+;hangle=strcompress(string(hangle),/remove_all) & zd=strcompress(string(zd),/remove_all)
+rr=wp.r_m+'m'+wp.r_s+'s'
+p=wp.p_d+'d'+wp.p_m+'m'
+i=wp.i_d+'d'+wp.i_m+'m'+wp.i_s+'s'
+hangl=0
+zd=0
+
+
+prodll='C:\Projects\cprog\VS2008\prosilica\Debug\prosilica.dll'
+
+
+r=call_external(prodll,'openfits',outfile,/all_value,/cdecl)
+
+r=call_external(prodll,'WriteImage',wp.nimg,/all_value,/cdecl)
+r=call_external(prodll,'addkeywords_prosilica',     $
+          obs,    $
+          wp.wavelength,  $
+          pol,    $
+          sttime,   $
+          entime,   $
+          rr,   $
+          p,    $
+          i,    $
+          hangl,  $
+          zd, $
+          'pro_obs',  $
+          /all_value,/cdecl)
+r=call_external(prodll,'closefits',/all_value,/cdecl)
+
+END
+
+;**************************************************************
+PRO savestmpfits,sttime
+;--------------------------------------------------------------
+;common T3_ParamLib,prodll
+;common T3_ParamLib,wp
+prodll='C:\Projects\cprog\VS2008\prosilica\Debug\prosilica.dll'
+tmp='                                                             '
+
+wp={widget_param, $
+    wavelength: '6000',       $   ; wave length observed [A]
+    expo:        50l,         $   ; exposure time [usec]
+    gain:        0,           $   ; gain 0�`28
+    nimg:        100,         $   ;  # of image 
+    binx:        2,           $   ; Binning X 1�`8
+    biny:        2,           $   ; Binning Y 1�`1200
+    Height:      600,         $   ; Height  max=1200 (biny=1)
+    Width:       800,         $   ; Width  max=1600 (binx=1)
+    RegionX:     0,           $   ; start of region read out,pixel,left edge
+    RegionY:     0,           $   ; start of region read out,pixel,top edge
+    clock:       79861111l,  $   ; TimeStanmpFrequency [Hz]
+    timelo:      0,           $   ; Time stamp, lower 32-bits
+    timehi:      0,           $   ; Time stamp, upper 32-bits
+    svdir:       'C:\Projects\IDLPRO\test_tk', $   ; save directory
+    fname:       'fname',     $   ; head of file name 
+    nf:          2,           $   ; number of files
+    input:       tmp,         $   ; contec cdio input �@�����j�^�[�v�̕����񃁃����i�H�j
+    output:      tmp,         $   ; contec cdio output�@����m�ۂ���K�v����
+    r_m:         ' ',         $   ; RADIUS [arcmin]
+    r_s:         ' ',         $   ; RADIUS [arcsec]
+    p_d:         ' ',         $   ; POLAR ANGLE [arcdeg]
+    p_m:         ' ',         $   ; POLAR ANGLE [arcmin]
+    i_d:         ' ',         $   ; INCLINATION [arcdeg]
+    i_m:         ' ',         $   ; INCLINATION [arcmin]
+    i_s:         ' ',         $   ; INCLINATION [arcsec]
+    n_evsample:  0l           $   ; omake
+   }
+   
+
+
+outfile=wp.svdir+'stmp'+sttime+'.fits'
+print,outfile 
+
+r=call_external(prodll,'TimeStamp',outfile,wp.nimg,/all_value,/cdecl)
+
+END
+

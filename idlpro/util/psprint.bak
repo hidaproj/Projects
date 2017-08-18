@@ -1,0 +1,28 @@
+; psprint.pro
+
+psfile0='d:\tmp\st.ps'
+if not keyword_set(psfile0) then psfile0='c:\usr\idl\idl.ps'
+
+dllfile='c:\nkrprj\cprog\oscomdll.dll'
+gsdir='c:\usr\gs261\'
+
+psfile=psfile0
+ip=strpos(psfile,'\')
+while ip ne -1 do begin
+	strput,psfile,'/',ip
+	ip=strpos(psfile,'\')
+endwhile
+
+cd,gsdir,current=old_dir
+gsfile='tempgs.lst'
+openw,1,gsfile
+writeu,1,'('+psfile+') run '
+writeu,1,'quit'
+close,1
+
+com='gswin.exe '+'-f'+gsfile
+
+retn = call_external(dllfile,'excom',com, value = [0b]) 
+
+
+end

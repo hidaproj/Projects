@@ -1,0 +1,18 @@
+a='13'
+files=findfile('C:\anan\10_19\hige*i1_'+a+'_*.bin',count=n)
+data2=fltarr(640,512,n)
+;dfile=findfile('C:\anan\10_19\hige*i1_'+a+'dark*.bin',count=n)
+;dark2=fltarr(640,512,n)
+
+for i=0,n-1 do begin
+print,files(i)
+ img=readbin(files(i))
+ data2(*,*,i)=float(img)
+; dimg=readbin(dfile(i))
+; dark2(*,*,i)=float(dimg)
+endfor
+
+data1=rebin(data2,640,512,1)
+;dark1=rebin(dark2,640,512,1)
+
+end

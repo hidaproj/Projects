@@ -1,0 +1,151 @@
+; LUCEO quartz Lyot filter
+;*****************************************************
+pro comcom,com
+;-----------------------------------------------------
+; send command string to COMx
+
+common qlflib,dllfile,PNs,Vss,Vms,Acs,Unknown,Dev_exist
+retn = call_external(dllfile,'CommWrite',com)
+
+end
+
+
+;*****************************************************
+common qlflib,dllfile,PNs,Vss,Vms,Acs,Unknown,Dev_exist
+common hr2000_com, wd, p, sp1
+
+@hr2000lib
+
+cd,'C:\Projects\IDLPRO\qlf'
+
+;init hr2000
+hr_init,spname
+
+wl=hr_getwl()
+nwl=n_elements(wl)
+dwl=5
+mwl=dwl*round(minmax(wl)/dwl)
+nwl2=(mwl[1]-mwl[0])/dwl+1
+wl2=mwl[0]+dwl*findgen(nwl2)
+
+;defbit0=transpose([[400,480,500,525,550,575,600,640,675,715,760,820,880,960,1000], $
+;	[2100,625,500,375,250,125,0,-125,-250,-375,-500,-625,-750,-875,-2100]])
+
+restore,'result.sav'
+ret0=aa2s[0,0]+aa2s[1,0]/wl2	;reference ret
+
+;exposure setting
+expo=1	;[ms]
+hr_setexpo,expo
+
+wdef,0,800,600
+!p.color=0
+!p.background=255
+
+;filter obs.
+;init the filter
+
+dpb=360/9000.                   ;[degree/bit]
+
+wl0=600.                        ;[nm]
+ip0=round(interpol(indgen(nwl2),wl2,wl0))
+
+rep=4
+
+wt1=0.1                          ;wait [sec]
+
+dllfile='C:\Projects\cprog\VS2010\RS232C_64\x64\Debug\RS232C_64.dll'
+
+COMx='COM4'
+ret=call_external(dllfile,'CommOpen', COMx, $
+                  ' baud=19200 parity=N data=8 stop=1', /PORTABLE )
+
+nb=5
+integ=10
+
+;to home position
+ans=dialog_message('initialize start. OK?')
+
+for k=0,nb-1 do begin
+   comcom,"M"+string(k+1,form='(i1)')+"O\r\n"
+   wait,wt1
+endfor
+
+;ans=dialog_message('rotation speed mesurement')
+;tic
+;comcom,"M5+009000\r\n"
+;ans=dialog_message('moter stopped then click OK.')
+;toc,elapse=et
+;stop
+et=13.5
+
+;original setting
+;restore,'result.sav'
+boffsets=intarr(nb)
+ratio2=2.^indgen(nb)
+
+bit0=ret0*360/dpb/rep
+
+bits=bit0#ratio2+rebin(transpose(boffsets),nwl2,nb)
+
+ans=dialog_message('to the first position. OK?')
+
+;to init position
+wt2=0.
+for k=0,nb-1 do begin
+   b=string(k+1,form='(i1)')
+   dbit1=bits[0,k] mod 9000
+   dbit2=dbit1-9000
+   dbit=min([dbit1,dbit2],/abs)
+   sxxxxxx=(["-","+"])[dbit ge 0]+string(abs(dbit),form='(i6.6)')
+   comcom,"M"+b+sxxxxxx+"\r\n"
+   wait,wt1
+   wt2=wt2-wt1>0
+   wt2>=(abs(dbit)/9000*et-wt1)>0
+endfor
+wait,wt2
+
+ans=dialog_message('observation start. OK?')
+
+spec=fltarr(nwl,nwl2)
+
+restore,'dark.sav'
+
+!p.multi=[0,1,2]
+for j=0,nwl2-1 do begin
+   print,j
+   for i=0,integ-1 do spec[*,j]+=hr_getsp1()/integ
+   plot,wl,spec[*,j]-dark,title='orignal setting @'+string(wl2[j],form='(i4)')+' nm',xtit='nm',yra=[1,2l^16-1], $
+        xs=3,ys=3,psy=3,/ylog
+   plots,wl2[j]*[1,1],10.^!y.crange,lines=2
+   ssw_legend,'bit '+strtrim(indgen(nb)+1,2)+' = '+string(bits[j,*],form='(i6)'),/clear
+
+   plot,wl,spec[*,j]-dark,xtit='nm',yra=[0,2l^16-1], $
+        xs=3,ys=3,psy=3
+   plots,wl2[j]*[1,1],!y.crange,lines=2
+   write_gif,'orignal.gif',tvrd(),/multi
+
+   if j eq nwl2-1 then break
+
+   wt2=0.
+   for k=nb-1,0,-1 do begin
+      b=string(k+1,form='(i1)')
+      dbit=bits[j+1,k]-bits[j,k]
+      sxxxxxx=(["-","+"])[dbit ge 0]+string(abs(dbit),form='(i6.6)')
+      comcom,"M"+b+sxxxxxx+"\r\n"
+      wait,wt1
+      wt2=wt2-wt1>0
+      wt2>=(abs(dbit)/9000*et-wt1)>0
+   endfor
+   wait,wt2
+endfor
+!p.multi=0
+
+write_gif,'original.gif',/close
+save,file='original.sav',bits,spec
+
+retn=call_external(dllfile,'CommClose')
+
+hr_close
+
+end

@@ -1,0 +1,85 @@
+Loop number    :       10
+Total time (ms):        578.00007
+Total Expo (ms):        500.00000
+Time Lag   (ms):        78.000069
+IDL> .r irprev2_test
+Compiled module: $MAIN$.
+Loop number    :       10
+Total time (ms):        578.00007
+Total Expo (ms):        500.00000
+Time Lag   (ms):        78.000069
+---
+Loop number    :       10
+Total time (ms):        609.99990
+Total Expo (ms):        500.00000
+Time Lag   (ms):        109.99990
+---
+Loop number    :       10
+Total time (ms):        594.00010
+Total Expo (ms):        500.00000
+Time Lag   (ms):        94.000101
+---
+Loop number    :       10
+Total time (ms):        592.99994
+Total Expo (ms):        500.00000
+Time Lag   (ms):        92.999935
+---
+Loop number    :       10
+Total time (ms):        610.00013
+Total Expo (ms):        500.00000
+Time Lag   (ms):        110.00013
+---
+Loop number    :       10
+Total time (ms):        592.99994
+Total Expo (ms):        500.00000
+Time Lag   (ms):        92.999935
+---
+Loop number    :       10
+Total time (ms):        594.00010
+Total Expo (ms):        500.00000
+Time Lag   (ms):        94.000101
+---
+Loop number    :       10
+Total time (ms):        593.99986
+Total Expo (ms):        500.00000
+Time Lag   (ms):        93.999863
+---
+Loop number    :       10
+Total time (ms):        592.99994
+Total Expo (ms):        500.00000
+Time Lag   (ms):        92.999935
+---
+Loop number    :       10
+Total time (ms):        594.00010
+Total Expo (ms):        500.00000
+Time Lag   (ms):        94.000101
+---
+Loop number    :       10
+Total time (ms):        562.99996
+Total Expo (ms):        500.00000
+Time Lag   (ms):        62.999964
+---
+Loop number    :       10
+Total time (ms):        562.99996
+Total Expo (ms):        500.00000
+Time Lag   (ms):        62.999964
+---
+Loop number    :       10
+Total time (ms):        546.99993
+Total Expo (ms):        500.00000
+Time Lag   (ms):        46.999931
+---
+Loop number    :      100
+Total time (ms):        5952.9998
+Total Expo (ms):        5000.0000
+Time Lag   (ms):        952.99983
+---
+Loop number    :     1000
+Total time (ms):        59891.000
+Total Expo (ms):        50000.000
+Time Lag   (ms):        9891.0000
+---
+Loop number    :    10000
+Total time (ms):        598907.00
+Total Expo (ms):        500000.00
+Time Lag   (ms):        98907.000

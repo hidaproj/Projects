@@ -1,0 +1,32 @@
+;  jpegmov.pro
+; make movie from jpeg files
+;   207.8.6	k.i.
+dir='C:\data\nkr\prom\070806\'
+fact=4
+files=findfile(dir+'*.jpg')
+nf=n_elements(files)
+read_jpeg,files[0],img1
+imgsize,img1,nx,ny
+nx2=nx/fact &	ny2=ny/fact
+mov=bytarr(nx2,ny2,nf)
+window,xs=nx2,ys=ny2
+for i=0,nf-1 do begin
+	read_jpeg,files[i],img1
+	img1=rebin(img1,nx2,ny2)
+	tvscl,img1>50
+	mov[*,*,i]=img1
+	openr,1,files[i]
+	l=fstat(1)
+	point_lun,1,l.size-512
+	h=nkrhead()
+	readu,1,h
+	close,1
+	tokei,h.time1,nx2-55,5,50,date=h.date1
+endfor
+
+
+
+
+
+
+end

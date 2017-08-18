@@ -1,0 +1,198 @@
+
+dpb=360/9000.                   ;[degree/bit]
+ddeg=1.                         ;[degree]
+dbit=round(ddeg/dpb)            ;[bit]
+ndeg=round(360/ddeg)
+
+deg=findgen(ndeg)               ;[degree]
+bit=deg/dpb                     ;[bit]
+
+wl0=600.                        ;[nm]
+
+rep=4
+
+wdef,0,800,600
+!p.color=0
+!p.background=255
+!p.charsize=1
+
+nb=5
+boffsets=intarr(nb)
+aa2s=fltarr(2,nb)
+
+for k=0,nb-1 do begin
+   b=string(k+1,form='(i1)')
+
+   restore,'block'+b+'_1.sav'
+   nwl2=n_elements(wl2)
+   dwl=median(deriv(wl2))
+
+   plot_image,cspec3,/nosq,orig=[wl2[0],0],scale=[dwl,ddeg], $
+              title='block'+b+' transmission',xtit='nm',ytit='degree', $
+              min=0,max=1
+   write_gif,'block'+b+'_2.gif',tvrd()
+
+
+   mspec=average(reform(cspec3,nwl2,ndeg/rep,rep),3)
+
+   ret1=replicate(!values.F_NAN,nwl2)
+   ret0=0.
+   for j=nwl2-1,0,-1 do if finite(mspec[j,0]) then begin
+      ret=floor(ret0)+(1-atan((fft(mspec[j,*]))[1],/phase)/(2*!pi)) mod 1
+      ret1[j]=(dret=ret-ret0) lt -0.1?ret+1:ret
+      ret0=ret1[j]
+   endif
+
+   ip0=round(interpol(indgen(nwl2),wl2,wl0))
+   int0=reform(mspec[ip0,*])
+   ff=fft(int0)
+   i0=abs(ff[0])
+   p1=abs(ff[1])
+   int1=2*p1*cos((deg/360.*rep-ret1[ip0])*2*!pi)+i0
+
+   boffset=(ret1[ip0] mod 1)*360/dpb/rep ;[bit]
+
+   plot,bit[0:ndeg/4-1],mspec[ip0,*], $
+        title='block'+b+' @'+string(wl0,form='(i4)')+' nm', $
+        /xs,xtit='bit',ytit='normalized intensity'
+   oplot,bit[0:ndeg/4-1],int1,lines=2
+   plots,boffset*[1,1],!y.crange,lines=3
+   ssw_legend,['measured','FFT fitting', $
+               'bit offset='+string(boffset,form='(i4)')],lines=[0,2,3],/right
+   write_gif,'block'+b+'_3.gif',tvrd()
+
+   mspec2=shift(mspec,0,-boffset*dpb/ddeg)
+   ret2=ret1-(ret1[ip0] mod 1)+1
+
+   flg=finite(ret2,/nan)
+   lbl=(label_region(flg[indgen(nwl2+2)-1]))[1:nwl2]
+   lbl[where(lbl eq lbl[0])]=0
+   lbl[where(lbl eq lbl[nwl2-1])]=0
+   lbl-=lbl ne 0
+
+   nnan=max(lbl)
+   grad=fltarr(2,nnan)
+   wid=intarr(nnan)
+   for j=0,nnan-1 do grad[0,j]=[mean((mm=minmax(where(lbl eq j+1,npix)))), $
+                                (ret2[mm[1]+1]-ret2[mm[0]-1])/(wid[j]=(npix+1))]
+   aa1=ladfit(grad[0,*],grad[1,*])
+
+   dret0=round((grad[1,*]-(aa1[1]*grad[0,*]+aa1[0]))*wid)
+   for j=nnan-1,0,-1 do ret2[0:grad[0,j]]+=dret0[j]
+   ret3=ret2-round(ret2[ip0])
+
+   wok=where(~flg)
+   aa2=ladfit(1/wl2[wok],ret3[wok])
+   fret=aa2[1]/wl2+aa2[0]
+   ;aa2[0]-=fret[ip0]
+   ;fret-=fret[ip0]
+   stop
+
+   !p.multi=[0,1,2]
+   plot_image,mspec2,/nosq,orig=[wl2[0],0],scale=[dwl,ddeg], $
+              title='Averaged block'+b+' transmission (bit offset corrected)', $
+              xtit='nm',ytit='degree',min=0,max=1
+   oplot,wl2,(ret2 mod 1)*360/rep,psy=1,color=3
+
+   plot,wl2,ret3,psy=1,/xs,tit='ret vs. wavelength', $
+        xtit='nm',ytit='retardation',/yno
+   oplot,wl2,fret
+   plots,!x.crange,[0,0],lines=2
+   plots,[1,1]*wl0,!y.crange,lines=2
+   ssw_legend,['ret=a0+a1/lambda','a0='+strtrim(aa2[0],2), $
+               'a1='+strtrim(aa2[1],2)],/right
+   write_gif,'block'+b+'_4.gif',tvrd()
+   !p.multi=0
+
+   rets=rebin(fret,nwl2,ndeg)- $
+        rebin(transpose(deg)/360.*rep-ret1[ip0],nwl2,ndeg)
+
+   rspec=cos(rets*2*!pi)/2+0.5
+
+   plot_image,rspec,/nosq,orig=[wl2[0],0],scale=[dwl,ddeg], $
+              title='block'+b+' transmission (reconst.)', $
+              xtit='nm',ytit='degree',min=0,max=1
+   oplot,wl2,(fret+ret1[ip0])*360/rep
+   write_gif,'block'+b+'_5.gif',tvrd()
+
+   save,file='block'+b+'_2.sav',boffset,aa2,rets,rspec,fret
+
+   aa2s[0,k]=aa2
+   boffsets[k]=boffset
+
+endfor
+
+ratio1=2.^indgen(nb)
+ratio2=aa2s[1,*]/aa2s[1,0]
+
+save,file='result.sav',boffsets,aa2s,ratio2
+
+;final
+rspec1=fltarr(nwl2,ndeg,nb)
+rspec2=fltarr(nwl2,ndeg,nb)
+fspec1=fltarr(nwl2,ndeg,nb)
+fspec2=fltarr(nwl2,ndeg,nb)
+
+wdef,0,1200,800
+wdef,1,1200,800
+!p.charsize=1.5
+
+for k=0,nb-1 do begin
+   b=string(k+1,form='(i1)')
+   restore,'block'+b+'_2.sav'
+
+   rspec1[0,0,k]=rspec
+   rspec2[0,0,k]=shift(rspec,0,-boffset*dpb/ddeg)
+
+   rdeg1=(deg-180)*ratio1[k]
+   rdeg1c=rdeg1 mod 360 & rdeg1c=(rdeg1c+360) mod 360
+   rdeg2=(deg-180)*ratio2[k]
+   rdeg2c=rdeg2 mod 360 & rdeg2c=(rdeg2c+360) mod 360
+
+   fspec1[0,0,k]=interpolate(rspec1[*,*,k],indgen(nwl2),rdeg1c/ddeg,/grid)
+   fspec2[0,0,k]=interpolate(rspec2[*,*,k],indgen(nwl2),rdeg2c/ddeg,/grid)
+
+   wset,0
+   !p.multi=[(nb-k+1) mod 6,3,2]
+   plot_image,fspec1[*,*,k],/nosq,orig=[wl2[0],rdeg1[0]/dpb], $
+              scale=[dwl,ratio1[k]/ddeg/dpb], $
+              title='block'+b+' (original) '+ $
+              ' bit offset='+string(0,form='(i4)')+ $
+              ' ratio='+ string(ratio1[k],form='(f7.4)'), $
+              xtit='nm',ytit='bit',min=0,max=1
+   oplot,wl2,fret*360/rep/dpb
+   plots,!x.crange,[0,0],lines=2,color=127
+   plots,wl0*[1,1],!y.crange,[0,0],lines=2,color=127
+   wset,1
+   !p.multi=[(nb-k+1) mod 6,3,2]
+   plot_image,fspec2[*,*,k],/nosq,orig=[wl2[0],rdeg2[0]/dpb], $
+              scale=[dwl,ratio2[k]/ddeg/dpb], $
+              title='block'+b+' (revised) '+ $
+              ' bit offset='+string(boffsets[k],form='(i4)')+ $
+              ' ratio='+ string(ratio2[k],form='(f7.4)'), $
+              xtit='nm',ytit='bit',min=0,max=1
+   oplot,wl2,fret*360/rep/dpb
+   plots,!x.crange,[0,0],lines=2,color=127
+   plots,wl0*[1,1],!y.crange,[0,0],lines=2,color=127
+
+endfor
+wset,0
+!p.multi=[nb-k+1,3,2]
+plot_image,product(fspec1,3),/nosq,orig=[wl2[0],-180/dpb], $
+           scale=[dwl,ratio1[0]/ddeg/dpb], $
+           title='Total transmission (original)', $
+           xtit='nm',ytit='bit (block1)',min=0,max=1
+write_gif,'block_total_1.gif',tvrd()
+wset,1
+!p.multi=[nb-k+1,3,2]
+plot_image,product(fspec2,3),/nosq,orig=[wl2[0],-180/dpb], $
+           scale=[dwl,ratio2[0]/ddeg/dpb], $
+           title='Total transmission (revised)', $
+           xtit='nm',ytit='bit (block1)',min=0,max=1
+write_gif,'block_total_2.gif',tvrd()
+
+!p.multi=0
+!p.charsize=1
+
+end
+

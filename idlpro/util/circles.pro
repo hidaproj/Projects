@@ -1,0 +1,26 @@
+; circles.pro
+
+fact=1
+printout=1
+
+if printout then begin
+	fact=30
+	pstate
+endif
+
+r=findgen(20)*10
+n=n_elements(r)
+ox=200 &	oy=200
+for i=0,n-1 do begin
+	circle,ox*fact,oy*fact,r(i)*fact
+endfor
+draw,(ox+[-1.1,1.1]*r(n-1))*fact,oy*[1,1]*fact
+draw,ox*[1,1]*fact,(oy+[-1.1,1.1]*r(n-1))*fact
+
+if printout then begin
+	device,/close
+	psout,'c:\usr\idl3.6\idl.ps'
+	set_plot,'win'
+endif
+
+end

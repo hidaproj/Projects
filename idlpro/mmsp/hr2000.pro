@@ -1,0 +1,154 @@
+; HR2000.pro
+;   2012.04.03   m.h., ;;;fixed yrange
+@hr2000lib
+
+;** MODIFICATION HISTORY **
+function version
+ver='1.0'	; '10/06/21	k.i.   
+ver='1.1'	; '10/07/29	k.i.   
+ver='1.2'	; '12/10/23	k.i.   fit Maya2000
+
+return,ver
+end
+
+
+;**************************************************************************
+pro hr2000_event, ev1
+common hr2000_com, wd, p, sp1
+
+
+;--------------- Obs control -----------------------------
+case (ev1.id) of
+    wd.Start: begin
+	print,'Start'
+	ev_stop=widget_event(wd.Stop,/nowait)
+	while ev_stop.id eq 0 do begin
+		ev_stop=widget_event(wd.Stop,/nowait)
+		sp1=hr_getsp1()
+		plot,p.wl,sp1,yrange=[0,6.4e4]	;;;fixed yrange
+	endwhile
+	plot,p.wl,sp1,yrange=[0,6.4e4]	;;;fixed yrange
+	end
+    wd.Stop: begin
+	end
+    wd.Get1: begin
+	print,'Get1'
+	sp1=hr_getsp1()
+	sp=fltarr(2048)
+	for i=0,p.integ-1 do begin
+		sp1=hr_getsp1()
+		sp=sp+sp1
+	endfor
+	sp1=sp
+	plot,p.wl,sp1,yrange=[0,6.4e4]	;;;fixed yrange
+	end
+    wd.Expo: begin
+	widget_control, ev1.id, get_value=value
+	p.expo=fix(value)
+	print,'expo=',p.expo
+	hr_setexpo,p.expo
+	end
+    wd.Integ: begin
+	widget_control, ev1.id, get_value=value
+	p.integ=fix(value)
+	print,'integ=',p.integ
+	end
+    wd.Outdir: begin
+	widget_control, ev1.id, get_value=value
+	p.outdir=value
+	print,'outdir=',p.outdir
+	end
+    wd.Outfile: begin
+	widget_control, ev1.id, get_value=value
+	p.outfile=value
+	print,'outfile=',p.outfile
+	end
+    wd.Save: begin
+	wl=p.wl
+	save,p,sp1,file=p.outdir+p.outfile
+	end
+    wd.Exit: begin
+	WIDGET_CONTROL, /destroy, ev1.top
+	return
+	end
+    else: 
+endcase
+
+
+
+end
+
+
+;**************************************************************************
+;  main
+common hr2000_com, wd, p, sp1
+
+hr_init,spname
+stop
+
+expo=100
+integ=1
+
+wl=hr_getwl()
+hr_setexpo,expo
+
+wd = {wd_hr2000, $
+	Get1:		0l, $
+	Integ:		0l, $
+	Expo:		0l, $
+	Start:		0l, $
+	Stop:		0l, $
+	Outdir:		0l, $
+	Outfile:	0l, $
+	Save:		0l, $
+	Exit:		0l $
+	}
+p = {hr2000_prm, $
+	spectrograph:	spname, $	; 'MayaPro2000',,
+	expo:		expo, $	; exsposure, msec
+	integ:		integ, $	; exsposure, msec
+	wl:		wl, $	; wavelength array [2048]
+	outdir:  	'c:\data\HR2000\', $
+	outfile:	'a.sav' $
+	}
+
+
+
+;-------  create widgets and get ID structure  ---------------------------
+base = WIDGET_BASE(title=spname+' spectrometer (Ver.'+version()+')', /column) 
+b1=widget_base(base, /row, /frame )
+   	wd.Start = widget_button(b1, value="Start", uvalue = "Start")
+   	wd.Stop = widget_button(b1, value="Stop", uvalue = "Stop")
+   	wd.Get1 = widget_button(b1, value="Get1", uvalue = "Get1")
+   	wd.Save = widget_button(b1, value="Save", uvalue = "Save")
+   	wd.Exit = widget_button(b1, value="Exit", uvalue = "Exit")
+b1b=widget_base(base, /row, /frame )
+	wd_label = widget_label(b1b,value='Expo:')
+	cexpo=string(p.expo,form='(i5)')
+	wd.Expo = widget_text(b1b,value=cexpo,xsize=6, uvalue='Expo', /edit)
+	wd_label = widget_label(b1b,value='msec,  Integ')
+	cinteg=string(p.integ,form='(i5)')
+	wd.Integ = widget_text(b1b,value=cinteg,xsize=6, uvalue='Integ', /edit)
+b2=widget_base(base, /column, /frame )
+	wd_label = widget_label(b2,value='Outdir:')
+	wd.Outdir = widget_text(b2,value=p.outdir,uvalue='Outdir', /edit)
+	wd_label = widget_label(b2,value='Outfile:')
+	wd.Outfile = widget_text(b2,value=p.outfile,uvalue='Outfile', /edit)
+	
+
+widget_control, base, /realize
+XMANAGER, 'hr2000', base
+
+hr_close
+stop
+
+sp=fltarr(2048)
+for i=0,100 do begin
+	sp1=hr_getsp1()
+	sp=sp+sp1
+	plot,wl,sp1,title=string(i)
+endfor
+
+hr_close
+
+end

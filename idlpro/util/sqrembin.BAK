@@ -1,0 +1,25 @@
+; sqrembin.pro
+; read SQREM ASCII file and convert to BIN file as 'sqyymmdd.bin'
+;	99/04/06	k.i.
+@sqremlib
+
+sqdir='c:\system\sqrem'
+ff=findfile(sqdir,count=count)
+if count eq 0 then sqdir='c:\usr\sqrem'
+datadir	=sqdir+'\datfiles\orig\'
+files='nkr_00'+string(indgen(19)+1,format='(i2.2)')+'.l01'
+
+nf=n_elements(files)
+
+ltime=doy*24l*3600+ltim
+for i=0,nf-1 do begin
+	rdascdat,datadir+files(i),year,doy,ltim,temp,head=head
+;	ltime=doy*24l*3600+ltim
+	outfile='sq'+strmid(head,1,2)+strmid(head,4,2)+strmid(head,7,2)+'.bin'
+	print,'output to ',datadir+outfile
+	wtbindat,datadir+outfile,year,doy,ltim,temp
+endfor
+
+
+
+end

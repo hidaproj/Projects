@@ -1,0 +1,15 @@
+; pro_obs.pro
+;  2010.09.11	T.A.
+;メッセージボックス＋レイアウト
+
+@DSTPOL_widget
+
+tmp=timeinit()
+MessageBox,'Prosilica の 準備 OK ?'
+MessageBox,'回転波長版 の 準備 OK ?'
+MessageBox,'偏光板自動回転装置 の 準備 OK ?'
+MessageBox,'HourAngle,ZenithDistance 転送PC の 準備 OK ?'
+
+DSTPOL_widget
+
+END

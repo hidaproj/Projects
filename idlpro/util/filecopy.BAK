@@ -1,0 +1,16 @@
+; filecopy.ppro
+
+file1='c:\tmp\file1'
+file2='c:\tmp\file2'
+openr,1,file1
+openw,2,file2
+c=' '
+while not eof(1) do begin
+	readu,1,c
+	writeu,2,c
+endwhile
+
+close,1
+close,2
+
+end

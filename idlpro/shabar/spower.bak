@@ -1,0 +1,32 @@
+; spower.pro
+
+dir='c:\data\shabar\'
+file=dialog_pickfile(path=dir,filter='*.*')
+darkf=dialog_pickfile(path=dir,filter='*.*')
+
+restore,darkf	; --> p, dat[n,*]
+drk=mean(dat)
+restore,file	; --> p, dat[n,*]
+dat=dat-drk
+
+dat0=transpose(dat[0,*])
+avr=mean(dat0)
+dat1=(dat0-avr)/avr
+nt=n_elements(dat1)
+t=findgen(nt)/p.rate	; sec
+calcpsd,t,dat1,f,pw
+df=float(p.rate)/nt
+
+lcut=10.	; lower cutoff, Hz
+ii=where(f gt lcut)
+ipw=total(pw[ii])*df
+rms=sqrt(ipw)
+
+plot_oo,f,pw,xtitle='freq. [Hz]',xrange=[1,p.rate/2],ytitle='PSD', $
+	charsize=1.2,title=file+',  dI/I='+string(rms,form='(f7.5)')+' rms'
+print,total(pw*df),avr
+
+
+
+
+end

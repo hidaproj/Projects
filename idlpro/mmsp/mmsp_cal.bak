@@ -1,0 +1,435 @@
+;  mmsp_cal.pro
+;  
+@mmsplib
+;** MODIFICATION HISTORY **
+function version
+ver='0.1'	; 2011.01.26   a.n., k.i.
+ver='0.2'	; 2011.03.09   k.i.
+ver='0.3'	; 2011.04.05   k.i.,  DRet, DDia, Rot MM, save MM
+ver='0.31'	; 2011.06.20   k.i.,  save MM  + s
+ver='0.4'	; 2011.07.09   k.i.,  flip button
+ver='0.5'	; 2011.07.30   k.i.,  wmin,wmax, wlp
+ver='0.6'	; 2012.04.08   k.i.,  Dia>0.97 -> Ret=0, Profs
+ver='0.7'	; 2012.04.25   k.i.,  flip90deg
+return,ver
+end
+
+;********************************************************************
+pro flip90deg,ang_r,ang,ret
+
+	ang_r=ang_r[0]
+	ii=where(ang gt ang_r+70, count)
+	if count gt 0 then begin
+		ang[ii]=ang[ii]-90.
+		ret[ii]=360.-ret[ii]
+	endif
+	ii=where(ang lt ang_r-70, count)
+	if count gt 0 then begin
+		ang[ii]=ang[ii]+90.
+		ret[ii]=360.-ret[ii]
+	endif
+
+end
+
+;********************************************************************
+pro mmsp_cal_event, ev1
+common mmsp_cal_com, wd, p, wl, cdat, dat, c, o, th1, th2, MM0, MM, s0, s
+rad=!pi/180.
+
+blank=replicate(' ',10)
+wl_ref=500.	; reference wavelength for flip axis
+
+case (ev1.id) of
+     wd.Dirb: begin
+	o.dir=dialog_pickfile(path=o.dir0,title='select dir',/dir)
+	cd,o.dir
+	widget_control,wd.Dir,set_value=o.dir
+	end
+     wd.Cfileb: begin
+	cfile=dialog_pickfile(path=o.dir,filter='c*.sav',title='select clear file')
+	filename_sep,cfile,dir,file=cfile
+	o.cfile=cfile
+	widget_control,wd.Cfile,set_value=o.cfile
+	restore_mmsp,o.dir+o.cfile,wl,p,cdat,wbin=o.wbin
+	imgsize,cdat,nw,nn
+	th1=dindgen(nn)*p.dth1
+	th2=th1/5.
+	;----  waveplate calibration  ----
+	mmsp_calwps,th1,th2,cdat,c,verb=0,thresh=1000.
+	iiv=where(c.valid eq 1)
+	stretch,255,0
+	ofm1=mean(c[iiv].offset1)
+	ofm2=mean(c[iiv].offset2)
+	if 1 then begin
+		window,xs=600,ys=700
+		plot,wl[iiv],c[iiv].ret1,ytitle='retardation [deg.]',xtickname=replicate(' ',10), $
+			charsize=1.5,title='MMSP waveplates',yrange=[80,140],pos=[0.15,0.5,0.95,0.9]
+		oplot,wl[iiv],c[iiv].ret2,line=2
+		plot,wl[iiv],c[iiv].offset1-ofm1,xtitle='wavelength [nm]',ytitle='axis [deg.]', $
+			charsize=1.5,yrange=15.*[-1,1],pos=[0.15,0.1,0.95,0.497],/noerase
+		oplot,wl[iiv],c[iiv].offset2-ofm2,line=2
+	endif
+	end
+     wd.Fileb: begin
+	file=dialog_pickfile(path=o.dir,filter='*.sav',title='select file')
+	filename_sep,file,dir,file=file
+	o.file=file
+	widget_control,wd.File,set_value=o.file
+	restore_mmsp,o.dir+o.file,wl,p,dat,wbin=o.wbin
+	imgsize,dat,nw,nn
+	;--------------  Mueller matrix  ----
+	mmsp_mueller,th1,th2,dat,c,MM,fit=fitv
+	s=mmdecmp2(MM,iiv=where(c.valid eq 1),flip=wd.flip)
+	ii=where(s.Dia gt 0.97, count)
+	if count ne 0 then begin & s[ii].Ret=0. &	s[ii].Vr=[1.,0,0] & endif
+	MM0=MM
+	s0=s
+	end
+     wd.PltMM: begin
+	window,0,xs=700,ys=700
+	xrange=[o.wmin,o.wmax]
+	mmplot,wl,mm,xtitle='wavelength [nm]',title=o.file,xr=xrange,chs=1.2, $
+		yrange=1.05*[-1,1],norm=wd.mmnorm
+	end
+     wd.PltRet: begin
+	ret=s.ret/!pi*180.
+	ang=atan(s.vr[1],s.vr[0])/2/!pi*180.
+	Vr2=s.vr^2
+	th=atan(sqrt(Vr2[2,*]),sqrt(Vr2[0,*]+Vr2[1,*]))/!pi*180
+	ang_r=interpol(ang,wl,wl_ref) &	ang_r=ang_r[0]
+	flip90deg,ang_r,ang,ret
+	;------------------------------------------------------------
+	window,1,xs=550,ys=740
+	x0=0.18 & 	x1=0.95
+	y0=0.12 &	y1=0.95
+	xrange=[o.wmin,o.wmax]
+	nn=4
+	dy1=(y1-y0)/nn
+	yp=y0+dy1*3
+	chars=1.5
+	plot,wl,s.tu,pos=[x0,yp,x1,yp+dy1-0.005],xrange=xrange,xstyle=1,xtickname=blank, $
+		ytitle='transmission',yrange=[0,1.2],charsize=chars,title=o.file
+	oplot,xrange,[1,1],line=1
+	yp=y0+dy1*2
+	plot,wl,ret,/noerase,pos=[x0,yp,x1,yp+dy1-0.005],xrange=xrange,xstyle=1,xtickname=blank, $
+		ytitle='retardation',charsize=chars,ystyle=1,yticks=4,yrange=[0,360.]
+	yp=y0+dy1*1
+	plot,wl,ang,/noerase,pos=[x0,yp,x1,yp+dy1-0.005],xrange=xrange,xstyle=1,xtickname=blank, $
+		ytitle='r-ax [deg.]',charsize=chars;,yrange=median(ang)+2*[-1,1]
+	oplot,wl,th,line=1
+	yp=y0+dy1*0
+	plot,wl,s.dia,/noerase,pos=[x0,yp,x1,yp+dy1-0.005],xrange=xrange,xstyle=1,xtitle='wavelength [nm]', $
+		ytitle='diattenuation',charsize=chars,yrange=[0,0.1]
+	end
+     wd.PltDia: begin
+	ret=s.ret/!pi*180.
+	ang=atan(s.vd[1],s.vd[0])/2/!pi*180.
+	Vd2=s.vd^2
+	th=atan(sqrt(Vd2[2,*]),sqrt(Vd2[0,*]+Vd2[1,*]))/!pi*180
+	;------------------------------------------------------------
+	window,1,xs=550,ys=740
+	x0=0.18 & 	x1=0.95
+	y0=0.12 &	y1=0.95
+	xrange=[o.wmin,o.wmax]
+	nn=4
+	dy1=(y1-y0)/nn
+	yp=y0+dy1*3
+	chars=1.5
+	plot,wl,s.tu,pos=[x0,yp,x1,yp+dy1-0.005],xrange=xrange,xstyle=1,xtickname=blank, $
+		ytitle='transmission',yrange=[0,1.2],charsize=chars,title=o.file
+	oplot,xrange,[1,1],line=1
+	yp=y0+dy1*2
+	plot,wl,s.dia,/noerase,pos=[x0,yp,x1,yp+dy1-0.005],xrange=xrange,xstyle=1,xtickname=blank, $
+		ytitle='diattenuation',charsize=chars,yrange=[0,1.1]
+	yp=y0+dy1*1
+	oplot,xrange,[1,1],line=1
+	plot,wl,ang,/noerase,pos=[x0,yp,x1,yp+dy1-0.005],xrange=xrange,xstyle=1,xtickname=blank, $
+		ytitle='d-ax [deg.]',charsize=chars;,yrange=median(ang)+2*[-1,1]
+;	oplot,wl,th,line=1
+	yp=y0+dy1*0
+	plot,wl,ret,/noerase,pos=[x0,yp,x1,yp+dy1-0.005],xrange=xrange,xstyle=1,xtitle='wavelength [nm]', $
+		ytitle='retardation',charsize=chars,ystyle=1,yticks=4,yrange=[0,360.]
+	end
+     wd.DDia: begin
+	ret=s.ret/!pi*180.
+	ang=atan(s.vd[1],s.vd[0])/2/!pi*180.
+	Vd2=s.vd^2
+	th=atan(sqrt(Vd2[2,*]),sqrt(Vd2[0,*]+Vd2[1,*]))/!pi*180
+	dia0=1. &	drange=0.1
+	;------------------------------------------------------------
+	window,1,xs=550,ys=600
+	x0=0.18 & 	x1=0.95
+	y0=0.12 &	y1=0.95
+	xrange=[o.wmin,o.wmax]
+	nn=2
+	dy1=(y1-y0)/nn
+	chars=1.5
+	yp=y0+dy1*1
+	plot,wl,s.dia,/noerase,pos=[x0,yp,x1,yp+dy1-0.005],xrange=xrange,xstyle=1,xtickname=blank, $
+		ytitle='!7D!3ret. [deg.]',charsize=chars,ystyle=1,yticks=4,yrange=dia0+drange*[-1,1], $
+		title=o.file
+	oplot,xrange,dia0*[1,1],line=1
+	yp=y0+dy1*0
+	ii=where(wl ge xrange[0] and wl le xrange[1])
+	angm=mean(ang[ii])
+	plot,wl,ang-angm,/noerase,pos=[x0,yp,x1,yp+dy1-0.005],xrange=xrange,xstyle=1,xtitle='wavelength [nm]', $
+		ytitle='!7D!3ax. [deg]',charsize=chars,yrange=2.*[-1,1]
+	oplot,xrange,0*[1,1],line=1
+	end
+     wd.DRet: begin
+	ret=s.ret/!pi*180.
+	ang=atan(s.vr[1],s.vr[0])/2/!pi*180.
+	Vr2=s.vr^2
+	th=atan(sqrt(Vr2[2,*]),sqrt(Vr2[0,*]+Vr2[1,*]))/!pi*180
+	ret0=180. &	rrange=20.
+	ang_r=interpol(ang,wl,wl_ref) &	ang_r=ang_r[0]
+	flip90deg,ang_r,ang,ret
+	;------------------------------------------------------------
+	window,1,xs=550,ys=600
+	x0=0.18 & 	x1=0.95
+	y0=0.12 &	y1=0.95
+	xrange=[o.wmin,o.wmax]
+	nn=2
+	dy1=(y1-y0)/nn
+	chars=1.5
+	yp=y0+dy1*1
+	plot,wl,ret,/noerase,pos=[x0,yp,x1,yp+dy1-0.005],xrange=xrange,xstyle=1,xtickname=blank, $
+		ytitle='!7D!3ret. [deg.]',charsize=chars,ystyle=1,yticks=4,yrange=ret0+rrange*[-1,1], $
+		title=o.file
+	oplot,xrange,ret0*[1,1],line=1
+	yp=y0+dy1*0
+	ii=where(wl ge xrange[0] and wl le xrange[1])
+	angm=mean(ang[ii])
+	plot,wl,ang-angm,/noerase,pos=[x0,yp,x1,yp+dy1-0.005],xrange=xrange,xstyle=1,xtitle='wavelength [nm]', $
+		ytitle='!7D!3ax. [deg]',charsize=chars,yrange=20.*[-1,1]
+	oplot,xrange,0*[1,1],line=1
+	end
+     wd.Wmin: begin
+	o.wmin=float(gt_wdtxt(ev1.id))
+	end
+     wd.Wmax: begin
+	o.wmax=float(gt_wdtxt(ev1.id))
+	end
+     wd.Wlp: begin
+	o.wlp=float(gt_wdtxt(ev1.id))
+	print,'wl   ='+string(o.wlp,form='(f6.2)')
+	tu=interpol(s.tu,wl,o.wlp)
+	ii=where(wl gt o.wlp-2. and wl lt o.wlp+2.)
+	ret=interpol(s[ii].ret/!pi*180.,wl[ii],o.wlp)
+	ang=atan(interpol(s[ii].vr[1],wl[ii],o.wlp),interpol(s[ii].vr[0],wl[ii],o.wlp))/2/!pi*180.
+	print,'Thru ='+string(tu,form='(f6.3)')+' '
+	print,'Ret  ='+string(ret,form='(f6.1)')+' deg.'
+	print,'RetAx='+string(ang,form='(f6.1)')+' deg.'
+	end
+     wd.Ax: begin
+	o.ax=float(gt_wdtxt(ev1.id))
+	end
+     wd.RotAng: begin
+	o.rotang=float(gt_wdtxt(ev1.id))
+	end
+     wd.GetAng: begin
+	ret=s.ret/!pi*180.
+	ang=atan(s.vr[1],s.vr[0])/2/!pi*180.
+	Vr2=s.vr^2
+	th=atan(sqrt(Vr2[2,*]),sqrt(Vr2[0,*]+Vr2[1,*]))/!pi*180
+	;------------------------------------------------------------
+	window,3,xs=500,ys=500
+	x0=0.18 & 	x1=0.95
+	y0=0.12 &	y1=0.95
+	xrange=[o.wmin,o.wmax]
+	nn=3
+	dy1=(y1-y0)/nn
+	yp=y0+dy1*2
+	chars=1.2
+	plot,wl,s.tu,pos=[x0,yp,x1,yp+dy1-0.005],xrange=xrange,xstyle=1,xtickname=blank, $
+		ytitle='transmission',yrange=[0,1.2],charsize=chars,title=o.file
+	oplot,xrange,[1,1],line=1
+	yp=y0+dy1*1
+	plot,wl,ret,/noerase,pos=[x0,yp,x1,yp+dy1-0.005],xrange=xrange,xstyle=1,xtickname=blank, $
+		ytitle='retardation',charsize=chars,ystyle=1,yticks=4,yrange=[0,360.]
+	yp=y0+dy1*0
+	dmax=1.1
+	plot,wl,s.dia,/noerase,pos=[x0,yp,x1,yp+dy1-0.005],xrange=xrange,xstyle=1,xtitle='wavelength [nm]', $
+		ytitle='diattenuation',charsize=chars,yrange=[0,dmax],ystyle=1
+	print,'click reference point...'
+	cursor,xc,yc,1,/data
+	dmy=min(abs(wl-xc),ic)
+	s1=s0[ic[0]]
+	if yc lt dmax then begin	; diattenuation
+		print,'Diattenuation, wl=',wl[ic]
+		ang=atan(s1.vd[1],s1.vd[0])/2/rad 
+	endif else begin
+		print,'Retardation, wl=',wl[ic]
+		ang=atan(s1.vr[1],s1.vr[0])/2/rad
+	endelse
+	o.rotang=o.ax-ang
+	cang=string(o.rotang,form='(f7.2)')
+	widget_control,wd.RotAng,set_value=cang
+	end
+     wd.MMRot: begin
+	MM=rotmm(MM0,o.rotang*rad)
+	s=mmdecmp2(MM,iiv=where(c.valid eq 1))
+	end
+     wd.MMSv: begin
+	filename_sep,o.file,dmy,outf
+	outf=outf+'_MM.sav'
+	outfile=dialog_pickfile(path=o.mmdir,file=outf,title='out MM file')
+	save,p,c,o,wl,MM,s,file=outfile
+	end 
+     wd.MMRd: begin
+	filename_sep,o.file,dmy,outf
+	outf=outf+'_MM.sav'
+	mmfile=dialog_pickfile(path=o.mmdir,filter='*MM.sav',title='select MM file')
+	restore,mmfile	; p,c,o,wl,MM,s
+	s=mmdecmp2(MM,iiv=where(c.valid eq 1))
+	MM0=MM
+	s0=s
+	end 
+     wd.MMNm: begin
+	if wd.mmnorm eq 0 then wd.mmnorm=1 else wd.mmnorm=0
+	end 
+     wd.Rflip: begin
+	if wd.flip eq 0 then wd.flip=1 else wd.flip=0
+	s=mmdecmp2(MM,iiv=where(c.valid eq 1),flip=wd.flip)
+	MM0=MM
+	s0=s
+	end 
+     wd.ProfMv: begin
+	window,3
+	imgsize,dat,nw,nn
+	yrange=[0,max([cdat,dat])]
+	for i=0,nn-1 do begin
+		plot,wl,cdat[*,i],xtitle='wavelength (nm)',line=1,title=string(i,form='(i3)'),yrange=yrange
+		oplot,wl,dat[*,i]
+		wait,0.1
+	endfor
+	end 
+     wd.Gif: begin
+	win2gif,'c:\tmp\a.gif'
+	end
+     wd.Exit: begin
+	WIDGET_CONTROL, /destroy, ev1.top
+	return
+	end
+    else: 
+endcase
+
+
+end
+
+;********************************************************************
+common mmsp_cal_com, wd, p, wl, cdat, dat, c, o, th1, th2, MM0, MM, s0, s
+
+; p  -  MMSP measurement parmeters
+; c  -  MMSP calib parameters
+; o  -  parameters for this program
+stretch,255,0
+
+o = mmsp_calctl()
+
+dir0='C:\data\MMSP\'
+o.dir0=dir0
+o.dir=dir0+'20120929\'
+o.mmdir=dir0+'mm\tf_bbmelm'
+o.wmin=400. &	o.wmax=1100.
+o.wbin=1
+;-----------------------------------------------------------------
+
+wd = {wd_mmsp_cal, $
+	Dirb:		0l, $
+	Dir:		0l, $
+	Cfileb:		0l, $
+	Cfile:		0l, $
+	Fileb:		0l, $
+	File:		0l, $
+	PltMm:		0l, $
+	PltRet:		0l, $
+	PltDia:		0l, $
+	DRet:		0l, $
+	DDia:		0l, $
+	Ax:		0l, $
+	GetAng:		0l, $
+	RotAng:		0l, $
+	Wmin:		0l, $
+	Wmax:		0l, $
+	Wlp:		0l, $
+	MMRot:		0l, $
+	MMSv:		0l, $
+	MMRd:		0l, $
+	MMNm:		0l, $
+	mmnorm:		0, $	; <-- 1, normalize Muller matrix
+	RFLIP:		0l, $
+	flip:		0, $
+	Gif:		0l, $
+	ProfMv:		0l, $
+	Exit:		0l $
+	}
+
+
+base = WIDGET_BASE(title='MMSP_CAL (Ver.'+version()+')', /column) 
+b1=widget_base(base, /column, /frame )
+b1a=widget_base(b1, /row )
+   	wd.Dirb = widget_button(b1a, value="Dir", uvalue = "Dirb",xsize=40)
+	wd.Dir = widget_text(b1a,value=o.dir,uvalue='Dir',xsize=30,/edit)
+b1b=widget_base(b1, /row )
+   	wd.Cfileb = widget_button(b1b, value="Cfile", uvalue = "Cfileb",xsize=40)
+	wd.Cfile = widget_text(b1b,value=o.cfile,uvalue='Cfile',xsize=30,/edit)
+b1c=widget_base(b1, /row )
+   	wd.Fileb = widget_button(b1c, value="File", uvalue = "Fileb",xsize=40)
+	wd.File = widget_text(b1c,value=o.file,uvalue='File',xsize=30,/edit)
+
+b1=widget_base(base, /column )
+b3a=widget_base(b1, /row )
+	dmy = widget_label(b3a,value='Plot: ')
+   	wd.PltMm = widget_button(b3a, value="MM", uvalue = "Plot-MM")
+   	wd.PltRet = widget_button(b3a, value="Ret", uvalue = "Plot-Ret")
+   	wd.PltDia = widget_button(b3a, value="Dia", uvalue = "Plot-Dia")
+   	wd.DRet = widget_button(b3a, value="DRet", uvalue = "DRet")
+   	wd.DDia = widget_button(b3a, value="DDia", uvalue = "DDia")
+b3a2=widget_base(b1, /row )
+   	wd.MMNm = widget_button(b3a2, value="norm", uvalue = "MMNm")
+   	wd.Rflip = widget_button(b3a2, value="Rflip", uvalue = "Rflip")
+   	wd.ProfMv = widget_button(b3a2, value="Profs", uvalue = "Profs")
+b3a3=widget_base(b1, /row )
+	dmy = widget_label(b3a3,value='wmin ')
+	cwmin=string(o.wmin,form='(f6.1)')
+	wd.Wmin = widget_text(b3a3,value=cwmin,uvalue='Wmin',xsize=5,/edit)
+	dmy = widget_label(b3a3,value='  wmax ')
+	cwmax=string(o.wmax,form='(f6.1)')
+	wd.Wmax = widget_text(b3a3,value=cwmax,uvalue='Wmax',xsize=5,/edit)
+	dmy = widget_label(b3a3,value=' wlp ')
+	cwp=string(o.wlp,form='(f6.1)')
+	wd.Wlp = widget_text(b3a3,value=cwp,uvalue='Wlp',xsize=5,/edit)
+b3b=widget_base(b1, /row )
+	dmy = widget_label(b3b,value='Rot: ')
+	dmy = widget_label(b3b,value='ax')
+	cang=string(o.ax,form='(f5.1)')
+	wd.Ax = widget_text(b3b,value=cang,uvalue='Ax',xsize=5,/edit)
+	dmy = widget_label(b3b,value=' ang')
+	cang=string(o.rotang,form='(f7.2)')
+	wd.RotAng = widget_text(b3b,value=cang,uvalue='RotAng',xsize=7,/edit)
+	dmy = widget_label(b3b,value='deg.')
+   	wd.GetAng = widget_button(b3b, value="GetAng", uvalue = "GetAng")
+b3c=widget_base(b1, /row )
+   	wd.MMRot = widget_button(b3c, value="MMRot", uvalue = "MMRot")
+   	wd.MMSv = widget_button(b3c, value="MMSv", uvalue = "MMSv")
+   	wd.MMRd = widget_button(b3c, value="MMRd", uvalue = "MMRd")
+   	wd.Gif = widget_button(b3c, value="Gif", uvalue = "Gif")
+   	wd.Exit = widget_button(b3c, value="Exit", uvalue = "Exit")
+
+widget_control, base, /realize
+XMANAGER, 'mmsp_cal', base
+
+
+stop
+window,3
+plot,dat[i0,*],psym=2
+oplot,fitv[i0,*]
+
+stop
+
+;------  misc plot  ------
+surface,dat,wl,th1,charsize=2,xtitle='wavelength [nm]',ytitle='!7h!31'
+
+
+end

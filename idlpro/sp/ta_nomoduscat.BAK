@@ -1,0 +1,54 @@
+function ta_nomoduscat,file1,file2,dark=dark,flat=flat
+
+pol_level0,file1,imgs1,hd,dt1,rtwv1
+pol_level0,file2,imgs2,hd,dt2,rtwv2
+nx   = fix(hd[0].naxis1)
+ny   = fix(hd[0].naxis2)
+nt   = fix(hd[0].naxis3)
+nx2  = nx/2
+expo = float(hd[0].expo)        ; [us]
+expos= expo*1e-6                ; [s]
+if keyword_set(dark) eq 0 then dark=fltarr(nx,ny)
+if keyword_set(flat) eq 0 then flat=fltarr(nx,ny)+1.
+phase,rtwv1,dt1,ph1,period1,fps1      ; ph[rad],period[s]
+phase,rtwv2,dt2,ph2,period2,fps2      ; ph[rad],period[s]
+fact = period1/4./!pi/expos * sin(4.*!pi*expos/period1)
+
+data1= fltarr(nx,ny,nt)
+data2= fltarr(nx,ny,nt)
+for j=0,nt-1 do begin
+    data1[*,*,j] = (imgs1[*,*,j] - dark)/flat
+    data2[*,*,j] = (imgs2[*,*,j] - dark)/flat
+endfor
+demodu,data1,ph1,amp1,chi1
+demodu,data2,ph2,amp2,chi2
+
+scat1=amp1[*,*,0]*fact - sqrt(amp1[*,*,5]^2 + amp1[*,*,6]^2)
+scat2=amp2[*,*,0]*fact - sqrt(amp2[*,*,5]^2 + amp2[*,*,6]^2)
+tmp=min([median(scat1[0:nx2-1,*]),median(scat1[nx2:nx-1,*])],nn)
+if nn eq 0 then scat1[nx2:nx-1,*]=fltarr(nx2,ny) else $
+  scat1[0:nx2-1,*]=fltarr(nx2,ny)
+tmp=min([median(scat2[0:nx2-1,*]),median(scat2[nx2:nx-1,*])],nn)
+if nn eq 0 then scat2[nx2:nx-1,*]=fltarr(nx2,ny) else $
+  scat2[0:nx2-1,*]=fltarr(nx2,ny)
+
+scat=[ [[scat1+scat2]],   $
+       [[scat1/amp1[*,*,0]*fact + scat2/amp2[*,*,0]*fact]] ]
+
+wdef,0,nx,ny
+stepper,scat
+
+return,scat
+END
+;============================================================
+dir='C:\data\dst\20110216\'
+
+file1=dir+'p00slitbb20101214_153732972.fits'
+file2=dir+'p90slitbb20101214_153556889.fits'
+
+res=ta_ta_nomoduscat(file1,file2)
+
+
+
+END
+
