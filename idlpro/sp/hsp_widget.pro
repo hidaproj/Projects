@@ -17,6 +17,10 @@
 ;20160524  T.A.			; DSTPOL_widget.pro => hsp_widget.pro, period
 ;20160721  T.A.
 ;20161212  T.A.                 ; window size
+;20170522  T.A.                 ; remove OrcaOutTriggerExposure in svp
+;20170620  T.A.                 ; binx, biny, regionx, regiony
+;20170704  T.A.                 ; add p to common, normalobs(wp,p)
+;20170828  T.A.                 ; model change
 ;
 ;==========================headder============================;
 ;PRO hsp_widget_event, ev
@@ -27,7 +31,7 @@
 ;=========================include=============================;
 @DSTPOL_ObsLib
 @C:\Projects\IDLPRO\dio8\CDIO_64_lib.pro
-@C:\Projects\IDLPRO\orca4\orcalib.pro
+@C:\Projects\IDLPRO\orca4\orcalibsp.pro
 @C:\Projects\IDLPRO\hardware\emplib.pro
 
 ;=========================main================================;
@@ -35,7 +39,7 @@
 ;**************************************************************
 pro hsp_widget_event, ev
 ;--------------------------------------------------------------
-common widgetlib,wp,wd,svwp1,svwp2,svwp3,svwp4,pm,ref_pulse
+common widgetlib,wp,wd,svwp1,svwp2,svwp3,svwp4,pm,ref_pulse,p
 COMMON bridge,bridge
 
 rdio=1
@@ -54,29 +58,6 @@ print,'uvalue=',uvalue,',  value=',value
 	;for i=0,200 do widget_CONTROL,wd.in,set_value=wp.input
 	;cdio_exit
 
-	if (uvalue eq "camera") then begin
-		wp.camera=value
-		case wp.camera of
-			0:begin
-				wp.binx=2
-				wp.biny=2
-				height0=1200
-				width0=1600
-			end
-			1:begin
-				wp.binx=1
-				wp.biny=1
-				height0=2048
-				width0=2048
-			end
-		endcase
-		wp.Height=height0/wp.biny
-		wp.Width=width0/wp.binx
-		widget_CONTROL,wd.binx,set_value=string(wp.binx, form='(i5)')
-		widget_CONTROL,wd.biny,set_value=string(wp.biny, form='(i5)')
-		widget_CONTROL,wd.Width,set_value=string(wp.Width, form='(i5)')
-		widget_CONTROL,wd.height,set_value=string(wp.Height, form='(i5)')
-	endif
 	if (uvalue eq "nimg") then begin
 		case wp.camera of
 			0:begin
@@ -100,6 +81,14 @@ print,'uvalue=',uvalue,',  value=',value
 			; to output trigger
 		endif
 		wp.expo=expo
+		print,'setting.....'
+		orcafin
+		wait,0.5
+		p=orcainit()
+		p=OrcaSetParam(expo=wp.expo*1e-6)
+		p=OrcaSetParam(bin=wp.binx)
+		p=OrcaSetParam(width=wp.width,height=wp.height,regionx=wp.regionx,regiony=wp.regiony)
+		print,'OK'
 		widget_CONTROL,wd.expo,set_value=string(wp.expo, form='(i8)')
 	endif
 	if (uvalue eq "gain") then wp.gain=fix(value)
@@ -109,49 +98,188 @@ print,'uvalue=',uvalue,',  value=',value
 			0:begin
 				height0=1200
 				width0=1600
+				wp.Width=width0/wp.binx
 			end
 			1:begin
 				height0=2048
 				width0=2048
+				obiny=wp.binx
+				owidth=wp.width
+				;wp.biny=fix(value)
+				wp.Width=width0/wp.binx - wp.regionx
+				wp.Height=height0/wp.binx - wp.regiony
+				print,'setting.....'
+				orcafin
+				wait,0.5
+				p=orcainit()
+				p=OrcaSetParam(expo=wp.expo*1e-6)
+				p=OrcaSetParam(bin=wp.binx)
+				p=OrcaSetParam(width=wp.width,height=wp.height,regionx=wp.regionx,regiony=wp.regiony)
+				;widget_CONTROL,wd.biny,set_value=string(wp.biny, form='(i5)')
+				widget_CONTROL,wd.height,set_value=string(wp.height, form='(i5)')
 			end
 		endcase
-		wp.Width=width0/wp.binx
 		widget_CONTROL,wd.Width,set_value=string(wp.Width, form='(i5)')
-	endif
-	if (uvalue eq "biny") then begin
-		wp.biny=fix(value)
-		case wp.camera of
-			0:begin
-				height0=1200
-				width0=1600
-			end
-			1:begin
-				height0=2048
-				width0=2048
-			end
-		endcase
-		wp.Height=height0/wp.biny
-		widget_CONTROL,wd.height,set_value=string(wp.Height, form='(i5)')
+		print,'OK'
 	endif
 	if (uvalue eq "height") then begin
-		if (fix(value) gt 1200/wp.binx) then begin
-  			widget_CONTROL,wd.height,set_value=string(wp.Height, form='(i5)')
-		endif else begin  &  wp.Height=fix(value)  &  endelse  &  endif
+		case wp.camera of
+			0:begin
+				if (fix(value) gt 1200/wp.binx) then begin
+  					widget_CONTROL,wd.height,set_value=string(wp.Height, form='(i5)')
+				endif else begin  &  wp.Height=fix(value)  &  endelse
+			end
+			1:begin
+				if (fix(value) gt (2048./wp.binx-wp.regiony)) then begin
+	  				widget_CONTROL,wd.height,set_value=string(wp.height, form='(i5)')
+				endif else begin
+					wp.height=fix(value)
+					print,'setting.....'
+					orcafin
+					wait,0.5
+					p=orcainit()
+					p=OrcaSetParam(expo=wp.expo*1e-6)
+					p=OrcaSetParam(bin=wp.binx)
+					p=OrcaSetParam(width=wp.width,height=wp.height,regionx=wp.regionx,regiony=wp.regiony)
+					widget_CONTROL,wd.height,set_value=string(wp.height, form='(i5)')
+				endelse
+			end
+		endcase
+		print,'OK'
+	endif
 	if (uvalue eq "width") then begin
-		if (fix(value) gt 1600/wp.biny) then begin
-  			widget_CONTROL,wd.width,set_value=string(wp.Width, form='(i5)')
-		endif else begin  &  wp.Width=fix(value)  &  endelse  &  endif
+		case wp.camera of
+			0:begin
+				if (fix(value) gt 1600/wp.binx) then begin
+  					widget_CONTROL,wd.width,set_value=string(wp.Width, form='(i5)')
+				endif else begin  &  wp.Width=fix(value)  &  endelse
+			end
+			1:begin
+				if (fix(value) gt (2048./wp.binx-wp.regionx)) then begin
+	  				widget_CONTROL,wd.width,set_value=string(wp.width, form='(i5)')
+				endif else begin
+					wp.width=fix(value)
+					print,'setting.....'
+					orcafin
+					wait,0.5
+					p=orcainit()
+					p=OrcaSetParam(expo=wp.expo*1e-6)
+					p=OrcaSetParam(bin=wp.binx)
+					p=OrcaSetParam(width=wp.width,height=wp.height,regionx=wp.regionx,regiony=wp.regiony)
+					widget_CONTROL,wd.width,set_value=string(wp.Width, form='(i5)')
+				endelse
+			end
+		endcase
+		print,'OK'
+	endif
 	if (uvalue eq "regionx") then begin
 		print,'RegionX Help : Start of region readout, in pixels; left edge.'
-		if (fix(value) gt (1600./wp.binx-wp.Width)) then begin
-  			widget_CONTROL,wd.regionx,set_value=string(wp.RegionX, form='(i5)')
-		endif else begin  &  wp.RegionX=fix(value)  &  endelse  &  endif
+		case wp.camera of
+			0:begin
+				if (fix(value) gt (1600./wp.binx-wp.Width)) then begin
+	  				widget_CONTROL,wd.regionx,set_value=string(wp.RegionX, form='(i5)')
+				endif else begin
+					wp.RegionX=fix(value)
+				endelse
+			end
+			1:begin
+				if (fix(value) gt (2048./wp.binx)) then begin
+	  				widget_CONTROL,wd.regionx,set_value=string(wp.RegionX, form='(i5)')
+				endif else begin
+					wp.RegionX=fix(value)
+					wait,0.5
+					;wp.width=2048/wp.binx-wp.RegionX
+					print,'setting.....'
+					orcafin
+					wait,0.5
+					p=orcainit()
+					p=OrcaSetParam(expo=wp.expo*1e-6)
+					p=OrcaSetParam(bin=wp.binx)
+					p=OrcaSetParam(width=wp.width,height=wp.height,regionx=wp.regionx,regiony=wp.regiony)
+		  			widget_CONTROL,wd.regionx,set_value=string(wp.RegionX, form='(i5)')
+					widget_CONTROL,wd.width,set_value=string(wp.Width, form='(i5)')
+				endelse
+			end
+		endcase
+		print,'OK'
+	endif
 	if (uvalue eq "regiony") then begin
 		print,'RegionY Help : Start of region readout, in pixels; top edge.'
-		if (fix(value) gt (1200./wp.biny-wp.Height)) then begin
-  			widget_CONTROL,wd.regiony,set_value=string(wp.RegionY, form='(i5)')
-		endif else begin  &  wp.RegionY=fix(value)  &  endelse  &  endif
-
+		case wp.camera of
+			0:begin
+				if (fix(value) gt (1200./wp.biny-wp.Height)) then begin
+	  				widget_CONTROL,wd.regiony,set_value=string(wp.RegionY, form='(i5)')
+				endif else begin
+					wp.RegionY=fix(value)
+				endelse
+			end
+			1:begin
+				if (fix(value) gt (2048./wp.binx)) then begin
+	  				widget_CONTROL,wd.regiony,set_value=string(wp.Regiony, form='(i5)')
+				endif else begin
+					wp.Regiony=fix(value)
+					wait,0.5
+					;wp.height=2048/wp.binx-wp.Regiony
+					print,'setting.....'
+					orcafin
+					wait,0.5
+					p=orcainit()
+					p=OrcaSetParam(expo=wp.expo*1e-6)
+					p=OrcaSetParam(bin=wp.binx)
+					p=OrcaSetParam(width=wp.width,height=wp.height,regionx=wp.regionx,regiony=wp.regiony)
+		  			widget_CONTROL,wd.regiony,set_value=string(wp.Regiony, form='(i5)')
+					widget_CONTROL,wd.height,set_value=string(wp.height, form='(i5)')
+				endelse
+			end
+		endcase
+		print,'OK'
+	endif
+	if (uvalue eq "cbox") then begin
+		case wp.camera of	
+			0:begin
+				pro_init
+				pro_setparam,wp
+				mxmi=[0,2.^12]
+				wx=800. ;20161212 TA
+				wy=600. ;20161212 TA
+			end
+			1:begin
+				;p=orcainit()	; comment out 20160709 T.A.
+				;p=OrcaSetParam(expo=wp.expo*1e-6,bin=wp.binx)
+				p=OrcaSetParam(expo=wp.expo*1e-6)
+				OrcaOutTriggerExposure					; 20170620 T.A.
+				mxmi=[0,2.^16]
+				wx=600. ;20161212 TA
+				wy=600. ;20161212 TA
+			end
+		endcase
+		;wy=wx/wp.width*wp.height
+		window,0,xs=wx,ys=wy  ;20161212 TA
+		!p.multi=[0,2,1]
+		xy=[400,300]
+		img=PrevObs(wp,xy,mxmi=mxmi)
+		box_cur1,x0,y0,nx,ny
+		x0r=fix(x0*wp.width/wx)
+		y0r=fix(y0*wp.height/wy)
+		nxr=fix(nx*wp.width/wx)
+		nyr=fix(ny*wp.height/wy)
+		wp.width=nxr
+		wp.height=nyr
+		wp.regionx=wp.regionx+x0r
+		wp.regiony=wp.regiony+y0r
+		print,'setting....'
+		orcafin
+		wait,0.5
+		p=orcainit()
+		p=OrcaSetParam(bin=wp.binx)
+stop
+		p=OrcaSetParam(width=wp.width,height=wp.height,regionx=wp.regionx,regiony=wp.regiony)
+		widget_CONTROL,wd.regionx,set_value=string(wp.Regionx, form='(i5)')
+		widget_CONTROL,wd.regiony,set_value=string(wp.Regiony, form='(i5)')
+		widget_CONTROL,wd.height,set_value=string(wp.height, form='(i5)')
+		widget_CONTROL,wd.width,set_value=string(wp.width, form='(i5)')
+		print,'OK'
+	endif
 	if (uvalue eq "free") then begin
 		wp.free = fix(value[0])
 		widget_control,wd.free,set_value=wp.free
@@ -221,7 +349,7 @@ print,'uvalue=',uvalue,',  value=',value
 		widget_CONTROL,wd.gain,set_value=string(wp.gain, form='(i5)')
 		widget_CONTROL,wd.nimg,set_value=string(wp.nimg, form='(i5)')
 		widget_CONTROL,wd.binx,set_value=string(wp.binx, form='(i5)')
-		widget_CONTROL,wd.biny,set_value=string(wp.biny, form='(i5)')
+		;widget_CONTROL,wd.biny,set_value=string(wp.biny, form='(i5)')
 		widget_CONTROL,wd.Width,set_value=string(wp.Width, form='(i5)')
 		widget_CONTROL,wd.height,set_value=string(wp.Height, form='(i5)')
 		widget_CONTROL,wd.regionx,set_value=string(wp.RegionX, form='(i5)')
@@ -295,18 +423,17 @@ print,'uvalue=',uvalue,',  value=',value
 	endif
 
 	ev_prevstop=widget_event(wd.bt_pren,/nowait)
-	ev_opend=widget_event(wd.opend,/nowait)
-	ev_opst=widget_event(wd.bs_wv_op,/nowait)
 
 	;------ Save -------;
 	if (uvalue eq "svo") then begin
 		fn=strarr(wp.nf)
 		for i=0,wp.nf-1 do begin
-			caldat,systime(/JULIAN), mon , day , year , hour , minu , seco
-			time1=hour*3600.+minu*60.+seco*1.
-			print,'===== # '+strcompress(string(i+1),/remove_all)+' ====='
-			print,hour,minu,seco
-			fn[i]=NormalObs(wp,firstimg=firstimg)
+			if wp.free ne 1 then begin
+				caldat,systime(/JULIAN), mon , day , year , hour , minu , seco & print,hour,minu,seco
+				time1=hour*3600.+minu*60.+seco*1.
+			endif
+			print,'===== # '+strcompress(string(i),/remove_all)+' ====='
+			fn[i]=NormalObs(wp,p,firstimg=firstimg)
 
 			if 1 then begin;==表示==;
 				case wp.camera of
@@ -324,7 +451,7 @@ print,'uvalue=',uvalue,',  value=',value
 			endif;==表示==;
 
 			if wp.free ne 1 then begin
-				caldat,systime(/JULIAN), mon , day , year , hour , minu , seco
+				caldat,systime(/JULIAN), mon , day , year , hour , minu , seco  & print,hour,minu,seco
 				time2=hour*3600.+minu*60.+seco*1.
 				if (wp.cds - (time2-time1)) le 0 then begin
 					print,'!cadence is less than time of taking images'
@@ -357,12 +484,12 @@ print,''
 			wp.empmove=1
 			wait,3
 		endif
-		OrcaOutTriggerExposure					; 20160710 T.A.
+		;OrcaOutTriggerExposure					; 20160710 T.A. comout 20170522 T.A.
 		fn=strarr(wp.nf)
 		for i=0,wp.nf-1 do begin	
-			print,'===== # '+strcompress(string(i+1),/remove_all)+' ====='
+			print,'===== # '+strcompress(string(i),/remove_all)+' ====='
 			caldat,systime(/JULIAN), mon1 , day1 , year1 , hour1 , minu1 , seco1
-			fn[i]=PolObs('',wp,firstimg=firstimg)
+			fn[i]=PolObs('',wp,p,firstimg=firstimg)
 
 			if 1 then begin;==表示==;
 				case wp.camera of
@@ -393,13 +520,13 @@ print,''
 					wait,(wp.cds - dtime)
 				endelse
 			endif else begin
-				print,'take ',dtime,'sec'
+				;print,'take ',dtime,'sec'
 			endelse
 		endfor
 
 		goto,jump
 		;==表示==;
-		;if (wp.binx ne 1) and (wp.biny ne 1) then begin 
+		;if (wp.binx ne 1) and (wp.binx ne 1) then begin 
 			;wx=wp.Width/4	& wy=wp.Height/4  ;20161212 TA commentout
 			case wp.camera of
 				0:begin
@@ -423,7 +550,7 @@ print,''
 					tvscl,img[*,*,j]
 					xyouts,0.05,0.05,string(j)+' binx='+	$
 						string(wp.binx,format='(i1)')+	$
-						' biny='+string(wp.biny,format='(i1)'),/norm
+						' biny='+string(wp.binx,format='(i1)'),/norm
 				endfor
 			endfor
 		;endif else print,'not display observed images because << binning 1>>'
@@ -446,9 +573,9 @@ print,''
 
 	if (uvalue eq "calib") then begin
 		OrcaOutTriggerExposure					; 20160710 T.A.
-		fn=CalibObs(wp,wd)
+		fn=CalibObs(wp,wd,p)
 		;==表示==;
-		;if (wp.binx ne 1) and (wp.biny ne 1) then begin 
+		;if (wp.binx ne 1) and (wp.binx ne 1) then begin 
 			case wp.camera of
 				0:begin
 					wx=800	& wy=600
@@ -471,7 +598,7 @@ print,''
 					tvscl,img[*,*,j]
 					xyouts,0.05,0.05,string(j)+' binx='+	$
 						string(wp.binx,format='(i1)')+	$
-						' biny='+string(wp.biny,format='(i1)'),/norm
+						' biny='+string(wp.binx,format='(i1)'),/norm
 				endfor
 			endfor
 			;wx=wp.Width/2	& wy=wp.Height/2
@@ -514,13 +641,15 @@ print,''
 			end
 			1:begin
 				;p=orcainit()	; comment out 20160709 T.A.
-				p=OrcaSetParam(expo=wp.expo*1e-6,bin=wp.binx)
-				OrcaOutTriggerExposure					; 20160710 T.A.
+				;p=OrcaSetParam(expo=wp.expo*1e-6,bin=wp.binx)
+				p=OrcaSetParam(expo=wp.expo*1e-6)
+				OrcaOutTriggerExposure					; 20170620 T.A.
 				mxmi=[0,2.^16]
 				wx=600. ;20161212 TA
 				wy=600. ;20161212 TA
 			end
 		endcase
+		;wy=wx/wp.width*wp.height
 		window,0,xs=wx,ys=wy  ;20161212 TA
 		window,1,xs=wx,ys=350;20161212 TA
 		!p.multi=[0,2,1]
@@ -581,58 +710,77 @@ print,''
 	endif
 
 ;========= contec dio==============;
-	if (uvalue eq 'diostart') then begin
-		;while (ev_opst ne 0) and ev_opend.id eq 0 do begin
-		while ev_opend.id eq 0 do begin
-			cdio_init
+	if (uvalue eq 'o0') then begin
+		cdio_init
+		cdio_o0,wp,wd
+		while wp.input ne 'origin' do begin
 			wp.input=cdio_input()
   			  widget_CONTROL,wd.in,set_value=wp.input
 			wp.output=cdio_outstate()
 			  widget_CONTROL,wd.out,set_value=wp.output
-
-
-			if (uvalue eq 'o45') then cdio_o45,wp,wd
-			if (uvalue eq 'o90') then cdio_o90,wp,wd
-			if (uvalue eq 'o135') then cdio_o135,wp,wd
-			if (uvalue eq 'o180') then cdio_o180,wp,wd
-			if (uvalue eq 'o225') then cdio_o225,wp,wd
-			if (uvalue eq 'o270') then cdio_o270,wp,wd
-			if (uvalue eq 'o315') then cdio_o315,wp,wd
-			if (uvalue eq 'o360') then cdio_o360,wp,wd
-			if (uvalue eq 'op25') then cdio_op25,wp,wd
-			if (uvalue eq 'opjg') then begin
-				while ev_opend.id eq 0 do begin
-					ev_dio = widget_event(wd.bs_wv_op,/nowait)
-					if ev_dio.id ne 0 then $
-					WIDGET_CONTROL, get_uvalue=uvalue, ev_dio.id
-					if (uvalue ne '') and (uvalue ne 'opjg') then break
-					cdio_opjg,wp,wd
-				endwhile
-			endif
-			if (uvalue eq 'omjg') then begin
-				while ev_opend.id eq 0 do begin
-					ev_dio = widget_event(wd.bs_wv_op,/nowait)
-					if ev_dio.id ne 0 then $
-					WIDGET_CONTROL, get_uvalue=uvalue, ev_dio.id
-					if (uvalue ne '') and (uvalue ne 'omjg') then break
-					cdio_omjg,wp,wd
-				endwhile
-			endif
-			if (uvalue eq 'o0') then cdio_o0,wp,wd
-			if (uvalue eq 'o0set') then cdio_o0set,wp,wd
-			if (uvalue eq 'ow0ad') then cdio_ow0ad,wp,wd
-			if (uvalue eq 'ostop') then cdio_ostop,wp,wd
-			uvalue=''
-
-			ev_dio = widget_event(wd.bs_wv_op,/nowait)
-			if ev_dio.id ne 0 then $
-			WIDGET_CONTROL, get_uvalue=uvalue, ev_dio.id
-
-			ev_opend=widget_event(wd.opend,/nowait)
-			ev_emp=widget_event(/nowait)
+		endwhile
+		cdio_op25,wp,wd
+		while wp.input ne '+22.5°' do begin
+			wp.input=cdio_input()
+  			  widget_CONTROL,wd.in,set_value=wp.input
+			wp.output=cdio_outstate()
+			  widget_CONTROL,wd.out,set_value=wp.output
 		endwhile
 		cdio_exit
 	endif
+
+;	if (uvalue eq 'diostart') then begin
+;		;while (ev_opst ne 0) and ev_opend.id eq 0 do begin
+;		while ev_opend.id eq 0 do begin
+;			cdio_init
+;			wp.input=cdio_input()
+ ; 			  widget_CONTROL,wd.in,set_value=wp.input
+;			wp.output=cdio_outstate()
+;			  widget_CONTROL,wd.out,set_value=wp.output
+;
+;
+;			if (uvalue eq 'o45') then cdio_o45,wp,wd
+;			if (uvalue eq 'o90') then cdio_o90,wp,wd
+;			if (uvalue eq 'o135') then cdio_o135,wp,wd
+;			if (uvalue eq 'o180') then cdio_o180,wp,wd
+;			if (uvalue eq 'o225') then cdio_o225,wp,wd
+;			if (uvalue eq 'o270') then cdio_o270,wp,wd
+;			if (uvalue eq 'o315') then cdio_o315,wp,wd
+;			if (uvalue eq 'o360') then cdio_o360,wp,wd
+;			if (uvalue eq 'op25') then cdio_op25,wp,wd
+;			if (uvalue eq 'opjg') then begin
+;				while ev_opend.id eq 0 do begin
+;					ev_dio = widget_event(wd.bs_wv_op,/nowait)
+;					if ev_dio.id ne 0 then $
+;					WIDGET_CONTROL, get_uvalue=uvalue, ev_dio.id
+;					if (uvalue ne '') and (uvalue ne 'opjg') then break
+;					cdio_opjg,wp,wd
+;				endwhile
+;			endif
+;			if (uvalue eq 'omjg') then begin
+;				while ev_opend.id eq 0 do begin
+;					ev_dio = widget_event(wd.bs_wv_op,/nowait)
+;					if ev_dio.id ne 0 then $
+;					WIDGET_CONTROL, get_uvalue=uvalue, ev_dio.id
+;					if (uvalue ne '') and (uvalue ne 'omjg') then break
+;					cdio_omjg,wp,wd
+;				endwhile
+;			endif
+;			if (uvalue eq 'o0') then cdio_o0,wp,wd
+;			if (uvalue eq 'o0set') then cdio_o0set,wp,wd
+;			if (uvalue eq 'ow0ad') then cdio_ow0ad,wp,wd
+;			if (uvalue eq 'ostop') then cdio_ostop,wp,wd
+;			uvalue=''
+;
+;			ev_dio = widget_event(wd.bs_wv_op,/nowait)
+;			if ev_dio.id ne 0 then $
+;			WIDGET_CONTROL, get_uvalue=uvalue, ev_dio.id
+;
+;			ev_opend=widget_event(wd.opend,/nowait)
+;			ev_emp=widget_event(/nowait)
+;		endwhile
+;		cdio_exit
+;	endif
 
 ;========= extra ==============;
 ;	if (uvalue eq 'close1') then begin	; ref. C:\Projects\IDLPRO\IR_Obs\dstangle.pro
@@ -652,10 +800,13 @@ if (is_dir(wp.svdir) eq 0) then spawn,'mkdir '+wp.svdir
 
 if (uvalue eq "EXIT") then begin
 	WIDGET_CONTROL, /destroy, ev.top
-	if wp.empmove eq 1 then empstop
+	if wp.empmove eq 1 then begin
+		empstop
+		wait,1
+		empclose
+	endif
 	wait,1
 	orcafin;20160709 T.A.
-	empclose
 	obj_destroy,bridge
 endif
 
@@ -664,18 +815,17 @@ end
 ;************************************************************************
 pro hsp_widget
 ;--------------------------------------------------------------
-common widgetlib,wp,wd,svwp1,svwp2,svwp3,svwp4,pm,ref_pulse
+common widgetlib,wp,wd,svwp1,svwp2,svwp3,svwp4,pm,ref_pulse,p
 COMMON bridge,bridge
 
 ;-------INITIALIZE-------;
-dmy=widget_base(title='T1obs',TLB_FRAME_ATTR=11,row=1,/align_center,ysize=100,xoff=800,yoff=400)
+dmy=widget_base(title='DST/HS/SP obs',TLB_FRAME_ATTR=11,row=1,/align_center,ysize=100,xoff=800,yoff=400)
 txt=widget_label(dmy,value='Please wait....',/ALIGN_CENTER,xsize=200)
 WIDGET_CONTROL,dmy,/REALIZE
 
 
 ref_pulse=4000.*5.		; resolution of motor * gear ratio (CRK523PAP-N5)
 time0=get_systime(ctime=time)	;time=gettime(), 20140629
-p=orcainit();20160709 T.A.
 
 ;-----  prepare object array for parallel processing -----------
 nCPU=!CPU.HW_NCPU
@@ -684,7 +834,7 @@ for i=0,nCPU-2 do begin
 	bridge[i]=obj_new('IDL_IDLBridge');IDL_IDLbridge()
 endfor
 ;----------------------------------------------------------------
-tmp='                                                             '
+tmp='                                  '
 wp={widget_param, $
 	wavelength:	'10830',	$		; wave length observed [A]
 	expo:		200000l,		$		; exposure time [μsec]
@@ -704,8 +854,8 @@ wp={widget_param, $
 ;				'/',	$		; save directory
 ;	svdir:		'C:\data\dst\'+	strmid(time,0,8)+	$
 ;	svdir:		'G:\data\'+	strmid(time,0,8)+	$
-;	svdir:		'G:\data\'+	strmid(time,0,8)+	$
-	svdir:		'D:\data\'+	strmid(time,0,8)+	$
+	svdir:		'G:\data\'+	strmid(time,0,8)+	$
+;	svdir:		'D:\data\'+	strmid(time,0,8)+	$
 				'\',	$		; save directory
 	fname:		'fname',	$		; head of file name
 	nf:		1,		$		; number of files
@@ -753,6 +903,11 @@ pm.m1.vm=ref_pulse*3./float(wp.period)	;18000./float(wp.period)
 pm.m2.vm=0.
 pm.dev_exist=1.
 
+p=orcainit();20160709 T.A.
+p=OrcaSetParam(expo=wp.expo*1e-6)
+p=OrcaSetParam(bin=wp.binx)
+p=OrcaSetParam(width=wp.width,height=wp.height,regionx=wp.regionx,regiony=wp.regiony)
+
 widget_control,dmy,/destroy
 ;--------------------------;
 
@@ -786,12 +941,6 @@ wd={wd_cdio,	$
 }
 main = WIDGET_BASE(title='Horizontal Specto-Polarimeter',/column)
 
-lab= widget_label(main,value='>>> Camera <<<');,font=2)
-cw_bg=cw_bgroup(main,['GE1650 (CCD)','ORCA-Flash4.0 (CMOS)'],/row,	$
-	uvalue='camera',/no_release,font='1',ypad=0,	$
-	set_value=wp.camera,/exclusive,/frame,	$
-	xsize=440,ysize=25)
-
 	;== Set Parameter ==;
 lab= widget_label(main,value='>>> Set Parameter <<<');,font=2)
 bs_sp=widget_base(main, /column, /frame)
@@ -800,36 +949,24 @@ bs_sp=widget_base(main, /column, /frame)
 		wd.expo=widget_text(bs_sp2,value=string(wp.expo, form='(i8)'), xsize=8, ysize=1, uvalue='expo',/edit)
 		gains=strcompress(string(indgen(29)),/remove_all)
 		wd.gain=cw_bselector(bs_sp2,gains,label_left='us        gain    : ', uvalue="gain",set_value=0, ysize=1)
-		lab=widget_label(bs_sp2,value='      integ   : ')
-		wd.nimg=widget_text(bs_sp2,value=string(wp.nimg, form='(i5)'), xsize=6, ysize=1, uvalue='nimg',/edit)
 	bs_sp3=widget_base(bs_sp, /row)
-		lab=widget_label(bs_sp3,value='      binx      : ')
+		lab=widget_label(bs_sp3,value='       bin      : ')
 		wd.binx=widget_text(bs_sp3,value=string(wp.binx, form='(i5)'), xsize=6, ysize=1, uvalue='binx',/edit)
-		lab=widget_label(bs_sp3,value='      　   biny 　 : ')
-		wd.biny=widget_text(bs_sp3,value=string(wp.biny, form='(i5)'), xsize=6, ysize=1, uvalue='biny',/edit)
+		lab=widget_label(bs_sp3,value='               nimg   : ')
+		wd.nimg=widget_text(bs_sp3,value=string(wp.nimg, form='(i5)'), xsize=6, ysize=1, uvalue='nimg',/edit)
 	bs_sp4=widget_base(bs_sp, /row)
-		lab=widget_label(bs_sp4,value='   　 Width　  : ')
+		lab=widget_label(bs_sp4,value='   　  nx　     : ')
 		wd.width=widget_text(bs_sp4,value=string(wp.Width, form='(i5)'), xsize=6, ysize=1, uvalue='width',/edit)
-		lab=widget_label(bs_sp4,value='pix      Height   : ')
+		lab=widget_label(bs_sp4,value='pix            ny     : ')
 		wd.height=widget_text(bs_sp4,value=string(wp.Height, form='(i5)'), xsize=6, ysize=1, uvalue='height',/edit)
 		lab=widget_label(bs_sp4,value='pix')
 	bs_sp5=widget_base(bs_sp, /row)
-		lab=widget_label(bs_sp5,value='    RegionX　: ')
+		lab=widget_label(bs_sp5,value='       x0　     : ')
 		wd.regionx=widget_text(bs_sp5,value=string(wp.RegionX, form='(i5)'), xsize=6, ysize=1, uvalue='regionx',/edit)
-		lab=widget_label(bs_sp5,value='    　　　RegionY : ')
+		lab=widget_label(bs_sp5,value='pix 　　　     y0     : ')
 		wd.regiony=widget_text(bs_sp5,value=string(wp.RegionY, form='(i5)'), xsize=6, ysize=1, uvalue='regiony',/edit)
+		lab=widget_label(bs_sp5,value='pix')
 	bs_sp6=widget_base(bs_sp, /row)
-		lab=widget_label(bs_sp6,		$
-			value='______________ save parameters ____________________________________________________')
-	bs_sp7=widget_base(bs_sp, /row)
-		bt=widget_button(bs_sp7, value="Save 1", uvalue = "svprm1",/align_center,xsize=60)
-		bt=widget_button(bs_sp7, value="Save 2", uvalue = "svprm2",/align_center,xsize=60)
-		bt=widget_button(bs_sp7, value="Save 3", uvalue = "svprm3",/align_center,xsize=60)
-		bt=widget_button(bs_sp7, value="Save 4", uvalue = "svprm4",/align_center,xsize=60)
-		lab=widget_label(bs_sp7,value='    　   　Load : ')
-		text=widget_text(bs_sp7,value=wp.svprm, xsize=6, ysize=1, uvalue='svprm',/edit)
-
-
 
 	;== Observation ==;
 lab_ob = widget_label(main,value='>>> Observation <<<');,font=2)
@@ -837,92 +974,39 @@ bs_ob=widget_base(main, /column, /frame)
 	bs_sv=widget_base(bs_ob, /column)
 		bs_sv0=widget_base(bs_sv, /row)
 			lab=widget_label(bs_sv0,value='Save Directory : ')
-			text=widget_text(bs_sv0,value=wp.svdir, xsize=45, uvalue='svdir',/edit)
+			text=widget_text(bs_sv0,value=wp.svdir, xsize=30, uvalue='svdir',/edit)
 		bs_sv1=widget_base(bs_sv, /row)
-			lab=widget_label(bs_sv1,value='   File Name    : ')
+			lab=widget_label(bs_sv1,value='   File name    : ')
 			text=widget_text(bs_sv1,value=wp.fname, xsize=10, uvalue='fname',/edit)
-			lab=widget_label(bs_sv1,value='          Number of Set : ')
+			lab=widget_label(bs_sv1,value='     # of file : ')
 			text=widget_text(bs_sv1,value=string(wp.nf, form='(i5)'), xsize=6, uvalue='nf',/edit)
 		bs_sv2=widget_base(bs_sv, /row)		;20110827
-			;positions=['west','east']
-			;wd.position=cw_bselector(bs_sv2,positions,label_left='Telescope position : ', uvalue="position",set_value=0, ysize=1)
-
-			;lab=widget_label(bs_sv2,value='            Wave Length   : ')
-			lab=widget_label(bs_sv2,value='Wave Length   : ')
+			lab=widget_label(bs_sv2,value='  Wavelength   : ')
 			text=widget_text(bs_sv2,value=wp.wavelength, xsize=6, uvalue='wavelength',/edit,	$
 					xoffset=100000)
-			lab=widget_label(bs_sv2,value='[A]')
+			lab=widget_label(bs_sv2,value='A')
 		bs_sv3=widget_base(bs_sv, /row)
-			;lab=widget_label(bs_sv3,value='r :')
-			;text=widget_text(bs_sv3,value=wp.r_m, xsize=4, uvalue='r_m',/edit,	$
-			;		xoffset=100000)
-			;lab=widget_label(bs_sv3,value='m')
-			;text=widget_text(bs_sv3,value=wp.r_s, xsize=4, uvalue='r_s',/edit,	$
-			;		xoffset=100000)
-			;lab=widget_label(bs_sv3,value='s')
-
-			;lab=widget_label(bs_sv3,value='  p :')
-			;text=widget_text(bs_sv3,value=wp.p_d, xsize=4, uvalue='p_d',/edit,	$
-			;		xoffset=100000)
-			;lab=widget_label(bs_sv3,value='d')
-			;text=widget_text(bs_sv3,value=wp.p_m, xsize=4, uvalue='p_m',/edit,	$
-			;		xoffset=100000)
-			;lab=widget_label(bs_sv3,value='m')
-
-			;lab=widget_label(bs_sv3,value='   i :')
-			;text=widget_text(bs_sv3,value=wp.i_d, xsize=4, uvalue='i_d',/edit,	$
-			;		xoffset=100000)
-			;lab=widget_label(bs_sv3,value='d')
-			;text=widget_text(bs_sv3,value=wp.i_m, xsize=4, uvalue='i_m',/edit,	$
-			;		xoffset=100000)
-			;lab=widget_label(bs_sv3,value='m')
-			;text=widget_text(bs_sv3,value=wp.i_s, xsize=4, uvalue='i_s',/edit,	$
-			;		xoffset=100000)
-			;lab=widget_label(bs_sv3,value='s')
 			waveplates=['LUCEO127#2','APSAW','Quarts']
-			wd.waveplate=cw_bselector(bs_sv2,waveplates,label_left='     Waveplate : ', uvalue="waveplate",set_value=0, ysize=1)
+			wd.waveplate=cw_bselector(bs_sv3,waveplates,label_left='  Waveplate    : ', uvalue="waveplate",set_value=0, ysize=1)
 		bs_sv35=widget_base(bs_sv, /row)
 			lab=widget_label(bs_sv35,value='Period of rotating waveplate :')
 			wd.period=widget_text(bs_sv35,value=wp.period, xsize=6, uvalue='period',/edit,	$
 					xoffset=100000)
-			lab=widget_label(bs_sv35,value=' [sec] ')
-			bt=widget_button(bs_sv35, value="STOP", uvalue = "empstop",/align_center,xsize=60)
-			lab=widget_label(bs_sv35,value=' COM')
-			wd.com=widget_text(bs_sv35,value=strcompress(wp.com,/remove_all), xsize=6, uvalue='com',/edit,	$
-					xoffset=100000)
-
-		; 20160721 =>
-		bs_sv36=widget_base(bs_sv, /row)
-			wd.free=cw_bgroup(bs_sv36,'Free run',/nonexclusive,set_value=string(wp.free,format='(i1.1)'),uvalue='free')
-			lab=widget_label(bs_sv36,value='  Cadence : ')
-			wd.cds=widget_text(bs_sv36,value=string(wp.cds,format='(i5)'),uvalue='cadense',/edit,xsize=6,ysize=1)
-			lab=widget_label(bs_sv36,value=' sec')
-		; <=
-
-
-
-			;lab=widget_label(bs_sv35,value='Pulse of motor :')
-			;text=widget_text(bs_sv35,value=wp.mtpulse, xsize=6, uvalue='mtpulse',/edit,	$
-			;		xoffset=100000)
-			;lab=widget_label(bs_sv35,value=' [pulse/sec]')
-			;waveplates=['APSAW','Quarts']
-			;wd.waveplate=cw_bselector(bs_sv35,waveplates,label_left='     Waveplate : ', uvalue="waveplate",set_value=0, ysize=1)
+			lab=widget_label(bs_sv35,value=' sec ')
+			bt=widget_button(bs_sv35, value="STOP", uvalue = "empstop",/align_center,xsize=40)
+			;lab=widget_label(bs_sv35,value=' COM9')
 		bs_sv4=widget_base(bs_sv, /row)
-			bt=widget_button(bs_sv4, value="Get (NOM)", uvalue = "svo",/align_center,xsize=120)
-			bt=widget_button(bs_sv4, value="Get (POL)", uvalue = "svp",/align_center,xsize=120)
-			bt=widget_button(bs_sv4, value="Get (CAL)", uvalue = "calib",/align_center,xsize=120)
+			bt=widget_button(bs_sv4, value="Get (NOM)", uvalue = "svo",/align_center,xsize=137)
+			bt=widget_button(bs_sv4, value="Get (POL)", uvalue = "svp",/align_center,xsize=137)
 	bs_pr=widget_base(bs_ob, /row)
-		bt_prst=WIDGET_BUTTON(bs_pr,uvalue='prev_st',value='Preview Start',/align_center,xsize=123)
-		wd.bt_pren=WIDGET_BUTTON(bs_pr,uvalue='prev_en',value='Preview Stop',/align_center,xsize=120)
-		bt_prof=WIDGET_BUTTON(bs_pr,uvalue='prof',value='Profiles',/align_center,xsize=123)
+		bt_prst=WIDGET_BUTTON(bs_pr,uvalue='prev_st',value='Preview Start',/align_center,xsize=140)
+		wd.bt_pren=WIDGET_BUTTON(bs_pr,uvalue='prev_en',value='Preview Stop',/align_center,xsize=137)
 
-lab_ob = widget_label(main,value='>>> Auto-Rotate Pol. <<<');,font=2)
+lab_ob = widget_label(main,value='>>> DST calibration <<<');,font=2)
 bs_wv=widget_base(main, /column, /frame)
 	bs_wv1=widget_base(bs_wv,/row)
-		lab = widget_label(bs_wv1,value='OPERATION : ');,font=2)
-		bt=widget_button(bs_wv1, value='Initialize', uvalue = 'diostart',/align_center,xsize=60)
-		wd.opend=widget_button(bs_wv1, value='Close', uvalue = 'diostop',/align_center,xsize=60)
-	lab = widget_label(bs_wv,value='<< STATUS >>');,font=2)
+		bt=widget_button(bs_wv1, value='ORIGIN + 22.5deg', uvalue = 'o0',/align_center,xsize=137)
+		bt=widget_button(bs_wv1, value="Get (CAL)", uvalue = "calib",/align_center,xsize=137)
 	bs_wv_ip=widget_base(bs_wv, /column)
 		bs_wv_ip1=widget_base(bs_wv_ip, /row)
 			lab = widget_label(bs_wv_ip1,value='     Status     = ');,font=2)
@@ -930,37 +1014,6 @@ bs_wv=widget_base(main, /column, /frame)
 		bs_wv_ip2=widget_base(bs_wv_ip, /row)
 			lab = widget_label(bs_wv_ip2,value='Output Status = ');,font=2)
 			wd.out = widget_label(bs_wv_ip2,value=wp.output)
-	lab = widget_label(bs_wv,value='<< OUTPUT >>');,font=2)
-	wd.bs_wv_op=widget_base(bs_wv, /column)
-		bs_wv_op1=widget_base(wd.bs_wv_op, /row)
-			bt=widget_button(bs_wv_op1, value='45deg', uvalue = 'o45',/align_center,xsize=60)
-			bt=widget_button(bs_wv_op1, value='90deg', uvalue = 'o90',/align_center,xsize=60)
-			bt=widget_button(bs_wv_op1, value='135deg', uvalue = 'o135',/align_center,xsize=60)
-			bt=widget_button(bs_wv_op1, value='180deg', uvalue = 'o180',/align_center,xsize=60)
-			bt=widget_button(bs_wv_op1, value='225deg', uvalue = 'o225',/align_center,xsize=60)
-			bt=widget_button(bs_wv_op1, value='270deg', uvalue = 'o270',/align_center,xsize=60)
-		bs_wv_op2=widget_base(wd.bs_wv_op, /row)
-			bt=widget_button(bs_wv_op2, value='315deg', uvalue = 'o315',/align_center,xsize=60)
-			bt=widget_button(bs_wv_op2, value='360deg', uvalue = 'o360',/align_center,xsize=60)
-			bt=widget_button(bs_wv_op2, value='+22.5deg', uvalue = 'op25',/align_center,xsize=60)
-			bt=widget_button(bs_wv_op2, value='JOG(+)', uvalue = 'opjg',/align_center,xsize=60)
-			bt=widget_button(bs_wv_op2, value='JOG(-)', uvalue = 'omjg',/align_center,xsize=60)
-			bt=widget_button(bs_wv_op2, value='STOP', uvalue = 'ostop',/align_center,xsize=60)
-		bs_wv_op3=widget_base(wd.bs_wv_op, /row)
-			bt=widget_button(bs_wv_op3, value='ORIGIN', uvalue = 'o0',/align_center,xsize=120)
-			bt=widget_button(bs_wv_op3, value='Read Origin Address', uvalue = 'ow0ad',/align_center,xsize=120)
-;lab_ob = widget_label(main,value='>>> etc. <<<');,font=2)
-;bs_ex=widget_base(main, /column, /frame)
-;	bt=widget_button(bs_ex, value='close dstangle.dat', uvalue = 'close1',/align_left,xsize=100)
-;	bs_ex1=widget_base(bs_ex, /row)
-;		lab = widget_label(bs_ex1,value=' motor pulse = ');,font=2)
-;		wd.motorpulse=widget_label(bs_ex1,value=string(wp.motorpulse[0], form='(i8)')+' ～ '+	$
-;		string(wp.motorpulse[1], form='(i8)')+'  pulse/sec ')
-;	bs_ex2=widget_base(bs_ex, /row)
-;		lab = widget_label(bs_ex2,value=' waveplate frequency = ');,font=2)
-;		wd.rot_freq=widget_text(bs_ex2,value=string(wp.rot_freq, form='(f6.3)'), xsize=6, ysize=1, uvalue='rot_freq',/edit)
-;		lab = widget_label(bs_ex2,value=' [Hz]  => input pulse = ');,font=2)
-;		wd.inpulse=widget_label(bs_ex2,value=string(wp.inpulse,form='(i8)')+'  pulse/sec ')
 wd.Exit = widget_button(main, value="Exit", uvalue = "EXIT")
 widget_control, main, /realize
 XMANAGER,'hsp_widget',main,modal=modal
