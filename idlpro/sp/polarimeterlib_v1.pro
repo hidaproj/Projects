@@ -2,20 +2,8 @@
 ;
 ; version 1
 ; 2012.09.02 T.A.
-; 2014.08.29 T.A. include ORCA-Flash4.0
-;
-; 2016.08.20 T.A. phase
-; .....
-; 2016.11.03 T.A. hd2az, par_mmsp2, version 2 in mm_dst
-; 2016.11.08 T.A. add hsp in main
-; 2016.11.10 T.A. dark in file2data, mkdark_xeva640
-; 2016.12.27 T.A. merginx, merginy, in mkkxky_orca
+
 ;-
-function version
-ver='Version 2.1'    ;2016.12.31 T.A. modify ref2irarp for hsp
-ver='Version 2.2'    ;2017.01.02 T.A. dstsp_mkiquv, 
-return,ver
-end
 ;*************************************************************************
 ;directory(procedure)
 ;mk_header.pro (function)
@@ -38,118 +26,6 @@ common pollib,dir
 dir='/work1_kujira/anan/works/program_anan/DSTPOL/'
 
 END
-;::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-function index_form
-
-hn={dstsp_v1                    ,$
-     SIMPLE  : 0        ,$
-     BITPIX  : 0l       ,$
-     NAXIS   : 0l       ,$
-     NAXIS1  : 0l       ,$
-     NAXIS2  : 0l       ,$
-     NAXIS3  : 0l       ,$
-     EXTEND  : 0        ,$
-     BSCALE  : 0l       ,$
-     BZERO   : 0l       ,$
-     ORIGIN  : ''       ,$
-     OBSERVAT: ''       ,$
-     TELESCOP: ''       ,$
-     INSTRUME: ''       ,$
-     PROGRAM : ''       ,$
-     PROG_VER: 0        ,$
-     OBS_TYPE: ''       ,$
-     POLSTATE: ''       ,$
-     TIMESYS : ''       ,$
-     DATE    : ''       ,$
-     DATE_OBS: ''       ,$
-     DATE_END: ''       ,$
-     WVPLATE : ''       ,$     
-     PERIOD  : 0d       ,$
-     DETNAM  : ''       ,$            
-     DET_TMP : 0l       ,$             
-     DET_PWR : 0l       ,$             
-     EXPTIME : 0d       ,$
-     CAMGAIN : 0l       ,$
-     FGBINX  : 0l       ,$
-     FGBINY  : 0l       ,$
-     X0      : 0l       ,$
-     X1      : 0l       ,$
-     Y0      : 0l       ,$
-     Y1      : 0l      ,$
-     WAVE    : ''       ,$
-     R       : 0d       ,$
-     P       : 0d       ,$
-     I       : 0d       ,$
-     HA      : 0d       ,$
-     ZD      : 0d       ,$
-     COMMENT : strarr(15)      ,$
-     HISTORY : strarr(5)       $
-     }
-
-return,hn
-end
-
-;*************************************************************************
-pro read_orca,file,index,data,nodata=nodata
-; PURPOSE :
-; 	read data from file takeb by ORCA-flash4.0
-; INPUTS :
-;        file : file name
-; OUTPUT :
-;	index : index
-;	data  : data
-; MODIFICATION HISTORY :
-;        T.A. '2014/08/29/		
-;**********************************]
-
-if not keyword_set(nodata) then nodata=0
-data=float(uint(rfits(file,head=h,nodata=nodata)))
-;data=double(uint(rfits(file,head=h,nodata=nodata)))
-hn=index_form()
-if strmid(h[0],29,1) eq 'T' then hn.simple=1
-i=1	&	hn.bitpix	= long(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-i=2	&	hn.naxis	= long(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-i=3	&	hn.naxis1	= long(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-i=4	&	hn.naxis2	= long(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-i=5	&	hn.naxis3	= long(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-hn.origin	= 'HIDA OBSERVATORY'
-hn.observat	= 'HIDA OBSERVATORY'
-hn.telescop	= 'DST'
-hn.instrume	= ''
-hn.program	= 'dstvspol_pro'
-hn.prog_ver	= 1
-i=18	&	hn.obs_type	= strtrim((strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1)),2)
-i=19	&	hn.polstate	= strtrim((strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1)),2)
-hn.timesys	= 'JST'
-i=6	&	hn.date		= strtrim((strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1)),2)
-i=6	&	hn.date_obs	= strtrim((strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1)),2)
-i=7	&	hn.date_end	= strtrim((strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1)),2)
-i=20	&	hn.wvplate	= strtrim((strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1)),2)
-i=21	&	hn.period	= double(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-i=22	&	hn.detnam	= strtrim((strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1)),2)
-hn.det_tmp	= 0l
-hn.det_pwr	= 0l
-i=12	&	hn.exptime	= double(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-i=23	&	hn.camgain	= long(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-i=17	&	hn.fgbinx	= long(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-i=17	&	hn.fgbiny	= long(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-i=15	&	hn.x0		= long(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-hn.x1	= hn.x0+hn.naxis1-1 
-i=16	&	hn.y0		= long(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-hn.y1	= hn.y0+hn.naxis2-1 
-i=24	&	hn.wave		= strtrim((strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1)),2)
-i=25	&	hn.r		= double(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-i=26	&	hn.p		= double(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-i=27	&	hn.i		= double(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-i=28	&	hn.ha		= double(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-i=29	&	hn.zd		= double(strmid(h[i],strpos(h[i],'=')+1,strpos(h[i],'/')-strpos(h[i],'=')-1))
-
-index=replicate(hn,hn.naxis3)
-
-end
-
-
-
 ;*************************************************************************
 ;+
 ; NAME       : file2data.pro (function)
@@ -172,18 +48,11 @@ end
 ; MODIFICATION HISTORY :
 ;        T.A. '2011/11/04/		
 ;        T.A. '2011/12/27/ cam_id		
-;	 T.A. '2014/08/29/ ORCA
-;        T.A. '2016/11/10/ XEVA ver 1, range in dark array
-;        T.A. '2016/11/17/ linear keyword
 ;-
 ;*************************************************************************
-pro file2data,file,data,hd,dark=dark,flat=flat,ver=ver,orca=orca,linear=linear
+pro file2data,file,data,hd,dark=dark,flat=flat,ver=ver
 
-if not keyword_set(orca) then begin
-	mreadfits,file,hd,imgs & imgs=float(imgs)
-endif else begin
-	read_orca,file,hd,imgs
-endelse
+mreadfits,file,hd,imgs & imgs=float(imgs)
 if not keyword_set(dark) then dark=fltarr(hd[0].naxis1,hd[0].naxis2)
 if not keyword_set(flat) then flat=fltarr(hd[0].naxis1,hd[0].naxis2)+1.
 if not keyword_set(ver) then ver=0
@@ -192,30 +61,18 @@ case ver of
 1:begin;--------------------------------
 data=imgs
 for i=0,hd[0].naxis3-1 do begin
-   ;if (hd[0].DETNAM eq 'XEVA640') and keyword_set(dark) then begin    ;when comment out?
-    ;if (hd[0].DETNAM eq 'XEVA640') and keyword_set(dark) and (hd[0].exptime eq 200) then begin  ; 2016.07.02 comment out T.A.
-   if (hd[0].DETNAM eq 'XEVA640') and $
-      keyword_set(dark) and $
-      (hd[0].exptime eq 0.2d) then begin
-        if not keyword_set(linear) then begin
-          data[0:hd[0].naxis1/2-1,*,i]=float( ((imgs[0:hd[0].naxis1/2-1,*,i]-  $
-                                                dark[0:hd[0].naxis1/2-1,*]-    $
-                                               351.56214)>0.)^$
-                                                (1./0.76143312)/59222.059d )
-          data[hd[0].naxis1/2:hd[0].naxis1-1,*,i]=   $
-                   float( ((imgs[hd[0].naxis1/2:hd[0].naxis1-1,*,i]-  $
-                            dark[hd[0].naxis1/2:hd[0].naxis1-1,*]-    $
-                            298.70353)>0)^$
-                   (1./0.77864712)/69704.267d )
-          data[*,*,i]=(data[*,*,i]/flat)<7.
-        endif else begin
-          data[*,*,i] = (imgs[*,*,i] - dark)/flat
-        endelse
+    if (hd[0].DETNAM eq 'XEVA640') and keyword_set(dark) then begin
+        data[0:hd[0].naxis1/2-1,*,i]=$
+          float( ((imgs[0:hd[0].naxis1/2-1,*,i]-dark-351.56214)>0.)^$
+                 (1./0.76143312)/59222.059d )
+        data[hd[0].naxis1/2:hd[0].naxis1-1,*,i]=$
+          float( ((imgs[hd[0].naxis1/2:hd[0].naxis1-1,*,i]-dark-298.70353)>0)^$
+                 (1./0.77864712)/69704.267d )
+        data[*,*,i]=(data[*,*,i]/flat)<7.
     endif else begin
         data[*,*,i] = (imgs[*,*,i] - dark)/flat
     endelse
 endfor
-
 end
 else:begin;-----------------------------
 data=imgs
@@ -234,7 +91,6 @@ for i=0,hd[0].naxis3-1 do begin
 endfor
 end
 endcase
-
 END
 ;*************************************************************************
 ;+
@@ -409,28 +265,7 @@ i=hd.i*!dtor
 END
 
 ;*************************************************************************
-function selectkxky,darkhd,hd
-
-res=where($
-	(darkhd.detnam eq hd.detnam) and $
-	(darkhd.wave eq hd.wave) and $
-	(darkhd.fgbinx eq hd.fgbinx) and $
-	(darkhd.fgbiny eq hd.fgbiny) and $
-	(darkhd.x0 eq hd.x0) and $
-	(darkhd.x1 eq hd.x1) and $
-	(darkhd.y0 eq hd.y0) and $
-	(darkhd.y1 eq hd.y1),$
-	npos)
-if npos eq 0 then begin
-	res=-1
-	;print,'no dark'
-	;stop
-endif
-
-return,res
-END
-;*************************************************************************
-function selectdark,darkhd,hd,nopos=nopos
+function selectdark,darkhd,hd
 
 res=where($
 	(darkhd.detnam eq hd.detnam) and $
@@ -443,20 +278,6 @@ res=where($
 	(darkhd.y0 eq hd.y0) and $
 	(darkhd.y1 eq hd.y1),$
 	npos)
-if keyword_set(nopos) then begin
-nopos=where($
-	(darkhd.detnam ne hd.detnam) or $
-	(darkhd.exptime ne hd.exptime) or $
-	(darkhd.camgain ne hd.camgain) or $
-	(darkhd.fgbinx ne hd.fgbinx) or $
-	(darkhd.fgbiny ne hd.fgbiny) or $
-	(darkhd.x0 ne hd.x0) or $
-	(darkhd.x1 ne hd.x1) or $
-	(darkhd.y0 ne hd.y0) or $
-	(darkhd.y1 ne hd.y1),$
-	nnopos)
-;help,nopos
-endif
 if npos eq 0 then begin
 	res=-1
 	;print,'no dark'
@@ -541,8 +362,6 @@ END
 ;        frate-  frame/rev
 ; MODIFICATION HISTORY :
 ;        T.A. '2011/09/11/		
-;	 hogehoge
-;        T.A. '2016/08/20/  change the position of else 
 ;-
 ;*************************************************************************
 pro phase,file,hd,ph,startframe,frate=frate
@@ -554,25 +373,19 @@ case hd.DETNAM of
         time=timestamp(file)            ;sec
         ph = time[1:*]/period *2.*!pi        ;rad
     end
-    'ORCA4':begin
-        startframe=1
-        if keyword_set(frate) then ph = findgen(hd.naxis3-startframe)/frate *2.*!pi $       ;rad
-		else print,'you need use frate'
-    end	
     'XEVA640':begin
         startframe=20
-	;startframe=0
         case period of
             4:begin
                 case hd.exptime of   ;msec
                     ;0.200:begin
                     0.200d:begin
-                        if (not keyword_set(frate)) or (frate eq 0) then $ ;20160820
+                        if not keyword_set(frate) then $
                           frate=18.9798 ;20110927[frames/rev] 
                         ph=findgen(hd.naxis3-startframe)/frate *2.*!pi ;rad
                     end
                     0.100d:begin
-                        if (not keyword_set(frate)) or (frate eq 0) then $ ;20160820
+                        if not keyword_set(frate) then $
                           frate=19.0285 ;20140708[frames/rev] 
                         ph=findgen(hd.naxis3-startframe)/frate *2.*!pi ;rad
 			end
@@ -582,7 +395,6 @@ case hd.DETNAM of
             2:begin
                 case float(hd.exptime) of   ;msec
                     0.100:begin
-startframe=0
                         if not keyword_set(frate) then $
                           frate=18.1818 ;20120613_2[frames/rev] 
                         ph=findgen(hd.naxis3-startframe)/frate *2.*!pi ;rad
@@ -590,20 +402,8 @@ startframe=0
                     else:stop
                 endcase
             end
-            else:begin
-		if (not keyword_set(frate)) or (frate eq 0) then begin
-			print,'no frame rate'
-			stop
-		endif
-                ph=findgen(hd.naxis3-startframe)/frate *2.*!pi ;rad
-	    end
         endcase
     end
-    else:begin				; 20160820 T.A. change the position
-        startframe=0
-        if keyword_set(frate) then ph = findgen(hd.naxis3-startframe)/frate *2.*!pi $       ;rad
-		else print,'you need use frate'
-    end	
 endcase
 
 END
@@ -702,62 +502,20 @@ END
 ;        T.A. '2011/10/10/		
 ;-
 ;*************************************************************************
-;function rot_amp,amp,angle,ofsetangleslit
-function rot_amp,amp,angle,offsetx=offsetx,offsety=offsety
+function rot_amp,amp,angle,ofsetangleslit
 
-ss=size(amp,/dim)
-nx=ss[0]
-ny=ss[1]
+nx=(size(amp,/dim))[0]
 res=amp
 res[*,*,0]=amp[*,*,0]
-if (not keyword_set(offsetx)) and (not keyword_set(offsety)) then begin
-	th=-(angle)   ;rad
-	res[*,*,1]=amp[*,*,1]*cos(1.*th)-amp[*,*,2]*sin(1.*th)
-	res[*,*,2]=amp[*,*,1]*sin(1.*th)+amp[*,*,2]*cos(1.*th)
-	res[*,*,3]=amp[*,*,3]*cos(2.*th)-amp[*,*,4]*sin(2.*th)
-	res[*,*,4]=amp[*,*,3]*sin(2.*th)+amp[*,*,4]*cos(2.*th)
-	res[*,*,5]=amp[*,*,5]*cos(4.*th)-amp[*,*,6]*sin(4.*th)
-	res[*,*,6]=amp[*,*,5]*sin(4.*th)+amp[*,*,6]*cos(4.*th)
-endif
-if (keyword_set(offsetx)) and (not keyword_set(offsety)) then begin
-	for i=0,nx-1 do begin
- 		th=-(angle+offsetx[i])   ;rad
-    		res[i,*,1]=amp[i,*,1]*cos(1.*th)-amp[i,*,2]*sin(1.*th)
-    		res[i,*,2]=amp[i,*,1]*sin(1.*th)+amp[i,*,2]*cos(1.*th)
-    		res[i,*,3]=amp[i,*,3]*cos(2.*th)-amp[i,*,4]*sin(2.*th)
-    		res[i,*,4]=amp[i,*,3]*sin(2.*th)+amp[i,*,4]*cos(2.*th)
-    		res[i,*,5]=amp[i,*,5]*cos(4.*th)-amp[i,*,6]*sin(4.*th)
-    		res[i,*,6]=amp[i,*,5]*sin(4.*th)+amp[i,*,6]*cos(4.*th)
-	endfor
-endif
-if (not keyword_set(offsetx)) and (keyword_set(offsety)) then begin
-;print,'ok'
-	for i=0,ny-1 do begin
- 		th=-(angle+offsety[i])   ;rad
-    		res[*,i,1]=amp[*,i,1]*cos(1.*th)-amp[*,i,2]*sin(1.*th)
-    		res[*,i,2]=amp[*,i,1]*sin(1.*th)+amp[*,i,2]*cos(1.*th)
-    		res[*,i,3]=amp[*,i,3]*cos(2.*th)-amp[*,i,4]*sin(2.*th)
-    		res[*,i,4]=amp[*,i,3]*sin(2.*th)+amp[*,i,4]*cos(2.*th)
-    		res[*,i,5]=amp[*,i,5]*cos(4.*th)-amp[*,i,6]*sin(4.*th)
-    		res[*,i,6]=amp[*,i,5]*sin(4.*th)+amp[*,i,6]*cos(4.*th)
-	endfor
-endif
-if (keyword_set(offsetx)) and (keyword_set(offsety)) then begin
-	for i=0,ny-1 do begin
-		for j=0,nx-1 do begin
- 			th=-(angle+offsety[i]+offsetx[j])   ;rad
-    			res[j,i,1]=amp[j,i,1]*cos(1.*th)-amp[j,i,2]*sin(1.*th)
-    			res[j,i,2]=amp[j,i,1]*sin(1.*th)+amp[j,i,2]*cos(1.*th)
-    			res[j,i,3]=amp[j,i,3]*cos(2.*th)-amp[j,i,4]*sin(2.*th)
-    			res[j,i,4]=amp[j,i,3]*sin(2.*th)+amp[j,i,4]*cos(2.*th)
-    			res[j,i,5]=amp[j,i,5]*cos(4.*th)-amp[j,i,6]*sin(4.*th)
-    			res[j,i,6]=amp[j,i,5]*sin(4.*th)+amp[j,i,6]*cos(4.*th)
-		endfor
-	endfor
-endif
-
-
-
+for i=0,nx-1 do begin
+    th=-(angle+ofsetangleslit[i])   ;rad
+    res[i,*,1]=amp[i,*,1]*cos(1.*th)-amp[i,*,2]*sin(1.*th)
+    res[i,*,2]=amp[i,*,1]*sin(1.*th)+amp[i,*,2]*cos(1.*th)
+    res[i,*,3]=amp[i,*,3]*cos(2.*th)-amp[i,*,4]*sin(2.*th)
+    res[i,*,4]=amp[i,*,3]*sin(2.*th)+amp[i,*,4]*cos(2.*th)
+    res[i,*,5]=amp[i,*,5]*cos(4.*th)-amp[i,*,6]*sin(4.*th)
+    res[i,*,6]=amp[i,*,5]*sin(4.*th)+amp[i,*,6]*cos(4.*th)
+endfor
 
 return,res
 END
@@ -1143,62 +901,26 @@ END
 ;        T.A. '2011/09/10/		
 ;-
 ;*************************************************************************
-function dstsp_dualfit,iquv0,kx,ky,ratio,minus=minus,intensity=intensity,deg=deg,hspbs03=hspbs03,ret=ret
-
-; don't use hspbs03 from 20170102 TA 
+function dstsp_dualfit,iquv0,kx,ky,ratio,minus=minus,intensity=intensity,deg=deg
 
 if not keyword_set(deg) then deg=1
-if keyword_set(hspbs03) then begin
-	nx=(size(hspbs03))[1]
-	ny=(size(hspbs03))[2]
-	tmp=hspbs03
-	prof=reform(rebin(hspbs03,nx,1))
-	for i=0,ny-1 do tmp[*,i]=prof
-	hspbs03=tmp
-endif
-
 
 if keyword_set(intensity) then begin
 	sa=size(iquv0,/dim) & nx=sa[0] & ny=sa[1]
 	res=fltarr(nx/2,ny)
-	if keyword_set(hspbs03) then begin
-		arrl=iquv0[0:nx/2-1,*]
-		arrlv=iquv0[0:nx/2-1,*,3]
-		arrl=arrl-arrlv*hspbs03[0:nx/2-1]*cos(ret)
-
-		arrr=poly_2d(iquv0[nx/2:nx-1,*],kx,ky,deg)
-		arrrv=iquv0[nx/2:nx-1,*,3]
-		arrr=arrr-arrrv*hspbs03[nx/2:nx-1,*]*cos(ret)
-	endif
-	res[*,*]=arrl+ratio*arrr
+	res[*,*]=iquv0[0:nx/2-1,*]+ratio*poly_2d(iquv0[nx/2:nx-1,*],kx,ky,deg)
 	goto,jump
 endif
 sa=size(iquv0,/dim) & nx=sa[0] & ny=sa[1] & nt=sa[2]
 res=fltarr(nx/2,ny,4)
-;Stokes-QUV
-for i=1,3 do begin
-	if keyword_set(hspbs03) and (i eq 3) then begin
-		left=iquv0[0:nx/2-1,*,i] + iquv0[0:nx/2-1,*,1]*hspbs03[0:nx/2-1,*]
-		right=poly_2d(iquv0[nx/2:nx-1,*,i],kx,ky,deg) - poly_2d(iquv0[nx/2:nx-1,*,1],kx,ky,deg)*hspbs03[nx/2:nx-1,*]
-	endif else begin
-		left=iquv0[0:nx/2-1,*,i]
-		right=poly_2d(iquv0[nx/2:nx-1,*,i],kx,ky,deg)
-	endelse
-	if not keyword_set(minus) then begin
-		res[*,*,i]=left - ratio*right
-	endif else begin
-		res[*,*,i]=-left + ratio*right
-	endelse
-endfor
-;Stokes-I
-if keyword_set(hspbs03) then begin
-	left=iquv0[0:nx/2-1,*,0] - res[*,*,3]*hspbs03[0:nx/2-1,*]*cos(ret)
-	right=poly_2d(iquv0[nx/2:nx-1,*,0],kx,ky,deg) - res[*,*,3]*hspbs03[nx/2:nx-1,*]*cos(ret)
+res[*,*,0]=iquv0[0:nx/2-1,*,0]+ratio*poly_2d(iquv0[nx/2:nx-1,*,0],kx,ky,deg)
+if not keyword_set(minus) then begin
+for i=1,3 do $
+  res[*,*,i]=iquv0[0:nx/2-1,*,i]-ratio*poly_2d(iquv0[nx/2:nx-1,*,i],kx,ky,deg)
 endif else begin
-	left=iquv0[0:nx/2-1,*,0]
-	right=poly_2d(iquv0[nx/2:nx-1,*,0],kx,ky,deg)
+for i=1,3 do $
+  res[*,*,i]=-iquv0[0:nx/2-1,*,i]+ratio*poly_2d(iquv0[nx/2:nx-1,*,i],kx,ky,deg)
 endelse
-res[*,*,0]=left+ratio*right
 
 jump:
 res=res/2.
@@ -1226,7 +948,6 @@ END
 ; MODIFICATION HISTORY :
 ;        T.A. '09/08/24      ; Stenflo "Solar Magnetic Field", p320.
 ;        T.A. '11/06/14      ; general form
-;        T.A. '15/01/31      ; abs(ro)
 ;*************************************************************************
 
 function muellermatrix_mirr,tau,ro,gen=gen
@@ -1242,8 +963,7 @@ if not keyword_set(gen) then begin
   	  	[0.,            0.,  -2.*ro*sin(tau), -2.*ro*cos(tau)]      $
     		]     
 endif else begin
-    ;mat = 1./(1.+ro)*[$
-    mat = 1./(1.+abs(ro))*[$
+    mat = 1./(1.+ro)*[$
                        [1.,ro,0.,0.],$
                        [ro,1.,0.,0.],$
                        [0.,0.,-sqrt(1.-ro^2)*cos(tau),-sqrt(1.-ro^2)*sin(tau)],$
@@ -1388,110 +1108,12 @@ mat=[$
 return,mat
 
 end
-;*******************************************************************
-;+
-; NAME       : hd2az.pro (function)
-; PURPOSE :
-;       return azimuth angle
-; CALLING SEQUENCE :
-;        res=hd2az(hd)
-; INPUTS :
-;	hd      header of data
-; OUTPUT :
-;       az    azimuth angle (rad)
-; OPTIONAL INPUT PARAMETERS :
-; KEYWORD PARAMETERS :
-; MODIFICATION HISTORY :
-;      T.A. '16/06/14
-;*******************************************************************
-function hd2az,hd
-
-
-lat=36.252/!radeg		;Hidaten
-nhd=n_elements(hd)
-hd2angle,hd,ha,zd,r,p,incli
-yy=strmid(hd.date_end,2,2)
-mm=strmid(hd.date_end,5,2)
-dd=strmid(hd.date_end,8,2)
-hh=strmid(hd.date_end,11,2)
-mi=strmid(hd.date_end,14,2)
-ss=strmid(hd.date_end,17,2)
-date=yy+'/'+mm+'/'+dd
-time=hh+':'+mi+':'+ss
-for i=0,nhd-1 do begin
-   date0=date[i]
-   time0=time[i]
-   jst2ut,date0,time0
-   ; date : 'yy/mm/dd'
-   ; time : 'hh:mm:ss'
-   date[i]=date0
-   time[i]=time0
-endfor
-yy=strmid(date,0,2)
-mm=strmid(date,3,2)
-dd=strmid(date,6,2)
-hh=strmid(time,0,2)
-mi=strmid(time,3,2)
-ss=strmid(time,6,2)
-jdcnv,fix('20'+yy),fix(mm),fix(dd),float(hh)+float(mi)/60.+float(ss)/3600.,jd
-sunpos,jd,ra,dec,longmed,oblt,/radian
-h=asin(sin(lat)*sin(dec) + cos(lat)*cos(dec)*cos(ha))
-sa=cos(dec)*sin(ha)/cos(h)
-ca=(sin(h)*sin(lat)-sin(dec))/cos(h)/cos(lat)
-az=atan(sa,ca)+!pi
-
-return,az
-end
-;*******************************************************************
-;+
-; NAME       : par_mmsp2.pro (function)
-; PURPOSE :
-;       version 0 :return parameters of mmsp2 (image rotator and AO)
-;       version 3 :return parameters of mirror between DST and image rotator
-; CALLING SEQUENCE :
-;        res=par_mmsp2(wave)
-; INPUTS :
-;       wave      wavelength (nm)
-; OUTPUT :
-;       parameters    array (33)
-; OPTIONAL INPUT PARAMETERS :
-;       imgrot      angle of image rotator (rad)
-; KEYWORD PARAMETERS :
-; MODIFICATION HISTORY :
-;      T.A. '16/06/14
-;      T.A. '17/01/16    version keyword, version 3 (data 20170103)
-;*******************************************************************
-function par_mmsp2,wave,version=version
-
-if not keyword_set(version) then version=0
-case version of 
-	0:begin
-		restore,'/home/anan/lib/DSTPOL/res_iter10_2.sav'
-		restore,'/home/anan/lib/DSTPOL/wl_res_iter.sav'
-		;restore,'~/study/program/idl/program_anan/DSTPOL/res_iter10_2.sav'
-		;restore,'~/study/program/idl/program_anan/DSTPOL/wl_res_iter.sav'
-		tmp=min(abs(wl-wave),i)
-		res=reform(res_iter10_2[*,i])
-	end
-	3:begin ;=> 20170116 TA
-		restore,'/home/kouui/mmsp2/image-rotator/m20170103_17511_MM.sav'
-		tmp=min(abs(wl-wave),i)
-		mm45=reform(mm[*,*,i])
-		mm45[*,3]=-mm45[*,3]
-		mm45[3,*]=-mm45[3,*]
-		res=reform(mm45,16)
-	end     ;20170116 TA <=
-endcase
-
-return,res
-END
-;*******************************************************************
 ;+
 ; NAME       : mm_dst.pro (function)
 ; PURPOSE :
 ; 	return Mueller matrix for DST model
 ; CALLING SEQUENCE :
-;        res=mm_dst(ha,zd,incli,telpos,ro_N,tau_N,ro_C,tau_C,sc,
+;        res=m_dst1(ha,zd,incli,telpos,ro_N,tau_N,ro_C,tau_C,sc,
 ;                     th_en,del_en,th_ex,del_ex)
 ; INPUTS :
 ; OUTPUT :
@@ -1503,134 +1125,32 @@ END
 ;	zd	zenith distance
 ; OPTIONAL INPUT PARAMETERS : 
 ; KEYWORD PARAMETERS :
-;       imgrot  angle of image rotator [rad]
-;       wvl     wavelength [nm]
-;       version = 0)VSP, 1)hogehoge?, 2)HSP ()
-;                 3)HSP(20170103) IR fixed measured, MIRR fitted
-;             
 ; MODIFICATION HISTORY :
 ;      T.A. '11/06/14
 ;      T.A. '12/06/03  phi_N=za => -za
 ;      T.A. '12/06/16  sign
 ;      T.A. '13/08/04  keyword newton
 ;      T.A. '13/08/17  sign of zd
-;      T.A. '16/09/09  horizontal spectropolarimeter, imgrot
-;      T.A. '16/11/02  add keywords zd, ha, wave, and az
-;      T.A. '16/11/03  version 2
-;      T.A. '17/01/16  revive DST/VS (version 0)
-;      T.A. '17/01/18  version 3, MMSP2(IR&MIRR) measured 2017.01.03 
+;
 ;*******************************************************************
-function mm_dst,hd,par,newton=newton,phin=phin,		$
-	hsp=hsp,imgrot=imgrot,zd=zd,ha=ha,az=az,incli=incli,	$ ;2016.11.02 T.A.
-	version=version
-	;xn=xn,tn=tn,xc=xc,tc=tc,sc=sc,dlen=dlen,t_en=t_en,dlex=dlex,t_ex=t_ex;2016.11.02 T.A.
+function mm_dst,hd,par,newton=newton,phin=phin
 
-;th_dst_mmsp2=0.*!dtor
-;th_mmsp2_hsp=(172.-132.2)*!dtor
-
-
+if hd.zd ge 0 then telpos='west' else telpos='east'
+hd2angle,hd,ha,zd,r,p,incli
 lat=36.252/!radeg		;Hidaten
-if not keyword_set(version) then begin  ;=> 20170116 TA
-     if keyword_set(hsp) then begin
-         version=2
-     endif else begin
-         version=0
-     endelse
-endif                                   ;20170116 TA <=
-if keyword_set(zd) then zd0=zd else zd0=0.
-if keyword_set(ha) then ha0=ha else ha0=0.
-if keyword_set(az) then az0=az else az0=0.
-if keyword_set(imgrot) then imgrot0=imgrot else imgrot0=0.
-if keyword_set(incli) then incli0=incli else incli0=0.
-if size(hd,/type) eq 8 then hd2angle,hd,ha0,zd0,r0,p0,incli0
-zd=zd0
-ha=ha0
-az=az0
-imgrot=imgrot0
-incli=incli0
-if zd ge 0 then telpos='west' else telpos='east'
-
-case version of
-	0:begin ;=> 20170116 TA
-                xn=par.xn
-                tn=par.tn
-                xc=par.xc
-                tc=par.tc
-                sc=par.sc
-                dlen=par.dlen
-                ten=par.t_en
-                dlex=par.dlex
-                tex=par.t_ex
-	end     ;20170116 TA <=
-	1:begin
-		xn=par.xn
-		tn=par.tn
-		xc=par.xc
-		tc=par.tc
-		sc=par.sc
-		dlen=par.dlen
-		ten=par.t_en
-		dlex=par.dlex
-		tex=par.t_ex
-		th_dst_mmsp2=par.th_dst_mmsp2
-		th_mmsp2_hsp=par.th_mmsp2_hsp
-		res_iter10_2=par.par_mmsp2	
-	end
-	2:begin
-		xn=par[0]
-		tn=par[1]
-		xc=par[2]
-		tc=par[3]
-		sc=par[4]
-		dlen=par[5]
-		ten=par[6]
-		dlex=par[7]
-		tex=par[8]
-		th_dst_mmsp2=par[9]
-		th_mmsp2_hsp=par[10]
-		res_iter10_2=par[11:44]	
-	end
-	3:begin
-		xn=par[0]
-		tn=par[1]
-		xc=par[2]
-		tc=par[3]
-		sc=par[4]
-		dlen=par[5]
-		ten=par[6]
-		dlex=par[7]
-		tex=par[8]
-		th_dst_mmsp2=par[9]
-		th_mmsp2_hsp=par[10]
-		mm_45=reform(par[27:42],4,4)
-	end
-	else:print,'no version in mmdst.pro'
-endcase
-
-;-------
 zd=abs(zd)			;20130817
 za=asin(cos(lat)*sin(ha)/sin(zd))
 phi_N=za
-if not keyword_set(hsp) then begin  ; VS/SP 20160927 TA
-	if telpos eq 'west' then begin
-	    phi_C=-zd
-	    phi_v=+zd-za+incli
-	endif else begin
-	    phi_C=+zd
-	    phi_v=-zd-za+incli
-	endelse
-endif else begin			; HS/SP 20160927 TA
-	phi_v=(-az+!pi)
-        if telpos eq 'west' then begin
-            phi_C=-zd
-        endif else begin
-            phi_C=+zd
-        endelse
+if telpos eq 'west' then begin
+    phi_C=-zd
+    phi_v=+zd-za+incli
+endif else begin
+    phi_C=+zd
+    phi_v=-zd-za+incli
 endelse
 
-
 M_S=[$
-	[1.+sc ,0.,0.,0.],	$
+	[1.+par.sc ,0.,0.,0.],	$
 	[0.    ,1.,0.,0.],	$
 	[0.    ,0.,1.,0.],	$
 	[0.    ,0.,0.,1.]	$
@@ -1642,78 +1162,18 @@ M_p=[$
 	[0.,0.,0.,-1.]	$
 	]
 M_G=M_p
-M_N=muellermatrix_mirr(tn,xn,/gen)
-M_C=muellermatrix_mirr(tc,xc,/gen)
-D_en=Muellermatrix_WP(dlen,ten)
-D_ex=Muellermatrix_WP(dlex,tex)
+M_N=muellermatrix_mirr(par.tn,par.xn,/gen)
+M_C=muellermatrix_mirr(par.tc,par.xc,/gen)
+D_en=Muellermatrix_WP(par.dlen,par.t_en)
+D_ex=Muellermatrix_WP(par.dlex,par.t_ex)
 R_N=muellermatrix_rot(phi_N)
 R_C=muellermatrix_rot(phi_C)
 R_pl=muellermatrix_rot(phi_v)
 
-mat=R_pl##D_ex##M_C##M_G##R_C##M_N##M_P##D_en##R_N
-if keyword_set(newton) then mat=R_pl##D_ex##M_C##M_G##R_C##M_N##M_P##D_en
+mat=M_S##R_pl##D_ex##M_C##M_G##R_C##M_N##M_P##D_en##R_N
+if keyword_set(newton) then mat=M_S##R_pl##D_ex##M_C##M_G##R_C##M_N##M_P##D_en
 phin=phi_N
 
-
-if keyword_set(hsp) then begin
-   R_mmsp2=muellermatrix_rot(th_dst_mmsp2)
-   R_rw=muellermatrix_rot(th_mmsp2_hsp)
-   case version of
-      2:begin
-	mm_ir=reform(res_iter10_2[0:15],4,4)
-	mm_45=reform(res_iter10_2[16:31],4,4)
-	th1=res_iter10_2[32]*!dtor
-	th2=res_iter10_2[33]*!dtor
-	mmsp2=	muellermatrix_rot(-th2) ## $
-	 	muellermatrix_rot(imgrot) ## $	 
-		mm_ir ## $
-	 	muellermatrix_rot(-imgrot) ## $	 
-		mm_45 ## $
-		muellermatrix_rot(th2) ## $	
-		muellermatrix_rot(th1)
-	;for ii=0,3 do for jj=0,3 do mmsp2[ii,jj]=mmsp2[ii,jj]/mmsp2[0,0]  no effect
-	;mmsp2[2,*]=-mmsp2[2,*]
-	;mmsp2[*,2]=-mmsp2[*,2]
-	mmsp2[3,*]=-mmsp2[3,*]
-	mmsp2[*,3]=-mmsp2[*,3]
-      end
-      3:begin
-	files=file_search('/home/kouui/mmsp2/image-rotator/save/*.sav',count=nf)
-	files=[files[0:51],files[53:*]]
-	angles=[0.00,1.00,2.00,3.00,4.00,6.00,8.00,10.00,12.01,14.00,16.00, $
-	        17.99,20.00,22.01,24.00,26.00,28.00,30.00,32.00,34.00,36.01,$
-		38.00,40.00,42.01,44.00,46.00,48.01,50.00,52.01,54.00,56.00,$
-		58.00,60.00,62.01,64.00,66.00,68.01,70.00,72.01,74.00,76.00,$
-		78.00,80.00,82.00,84.00,86.00,87.99,90.00,92.01,94.00,96.00,$
-		98.00,-2.00,-4.00,-6.00,-8.00,-10.00,-12.00,-14.00,-16.00,  $
-		-20.00,-21.99,-23.99,-26.00,-28.00,-30.00,-31.99,    $
-		-34.00,-36.00,-37.99,-40.00,-42.00,-43.99,-46.00,-48.00,    $
-		-49.99,-52.00,-54.00,-56.00,-57.99,100.01,102.00,104.00,    $
-		106.00,108.01,110.00,112.00,114.00,116.00,118.00,120.01,    $
-		122.01,124.00,126.00,128.00,130.00,132.01,134.00,136.00,    $
-		138.01,140.00,142.01,144.00,146.00,148.01,150.00]
-	pos=where(angles ne -30.0 and angles ne -31.990)
-	files=files[pos]
-	angles=angles[pos]
-	dangle=imgrot*!radeg-angles
-	tmp=min(abs(dangle),i0)
-;print,'restore, ',files[i0]
-	restore,files[i0]
-	tmp=min(abs(wl-float(hd.wave)*.1),i)
-	mm_ir=reform(mm[*,*,i])
-	;mm_ir=reform(rebin(mm[*,*,i-5:i+5],4,4,1))
-	mmsp2=	muellermatrix_rot(dangle[i0]*!dtor) ## $	 
-		mm_ir ## $
-	 	muellermatrix_rot(-dangle[i0]*!dtor) ## $	 
-	 	muellermatrix_rot((88.2 - 358.2)*!dtor) ## $	 
-		mm_45
-       end
-   endcase
-
-   mat=	R_rw ## mmsp2 ## R_mmsp2 ## mat
-endif
-mat=m_s##mat
-;stop
 return,mat
 END
 ;*************************************************************************
@@ -1765,17 +1225,14 @@ END
 ; KEYWORD PARAMETERS :
 ; MODIFICATION HISTORY :
 ;        T.A. '2011/11/23/		
-;        T.A. '2016/11/03/    parameters for HSP	
-;        T.A. '2017/01/16/    keyword th_mmsp2_hsp	
 ;-
 ;*************************************************************************
-function par_dst,hd,telpos=telpos,th_mmsp2_hsp=th_mmsp2_hsp
+function par_dst,hd,telpos=telpos
 
 wave=float(hd.wave)
 if not keyword_set(telpos) then begin
 if hd.zd ge 0 then telpos='west' else telpos='east'
 endif
-if not keyword_set(th_mmsp2_hsp) then th_mmsp2_hsp=(172.-132.2)*!dtor
 
 
 ref=[$
@@ -1833,10 +1290,7 @@ res={par_dst,$
      t_en    : 0.    ,$
      dlen    : 0.    ,$
      t_ex    : 0.    ,$
-     dlex    : 0.    ,$ 
-     th_dst_mmsp2 : 0.                   ,$
-     th_mmsp2_hsp : th_mmsp2_hsp   ,$
-     par_mmsp2    : fltarr(34)            $	
+     dlex    : 0.    $ 
      }
 
 return,res
@@ -2020,32 +1474,64 @@ return,res
 END
 ;*************************************************************************
 function ref2irarp,file,dark,kx,ky,mq=mq,single=single,$
-                     header=header,check=check,array=array,ver=ver,	$
-			orca=orca,frate=frate,shiftx=shiftx,amp=amp,	$
-			hspbs=hspbs,    $
-			pbsret1=pbsret1  ;20161231 TA
+                     header=header,check=check,array=array,ver=ver
+
 
 directory
 if not keyword_set(ver) then ver=0
-if not keyword_set(orca) then orca=0
-if not keyword_set(frate) then frate=0
-if not keyword_set(shiftx) then shiftx=0
-file2data,file,data,hdn,dark=dark,ver=ver,orca=orca
+file2data,file,data,hdn,dark=dark,ver=ver
 if keyword_set(header) then hd=header else hd=hdn[0]
 nx=hd.naxis1 & ny=hd.naxis2 & nt=hd.naxis3
 img=(reform(rebin(data,nx,ny,1),nx,ny))[0:nx/2-1,*]
-phase,file,hd,ph,startframe,frate=frate
+phase,file,hd,ph,startframe
 demodulation,data[*,*,startframe:nt-1],ph,amp,err,datfit
 
 amp4=sqrt(amp[*,*,5]^2+amp[*,*,6]^2)
 
-amp4=shift_img(amp4,[shiftx,0])
-for i=0,6 do amp[*,*,i]=shift_img(amp[*,*,i],[shiftx,0])
-img=shift_img(img,[shiftx,0])
-
 if not keyword_set(single) then begin;----------------------------------
+;ratio
+ratio=amp4[0:nx/2-1,*]/poly_2d(amp4[nx/2:nx-1,*],kx,ky,1)
+;axis
+axis0=atan(amp[*,*,5],amp[*,*,6])/4.
+if keyword_set(mq) then $
+  axis0[0:nx/2-1,*]=axis0[0:nx/2-1,*]+!pi/4. else $
+  axis0[nx/2:nx-1,*]=axis0[nx/2:nx-1,*]+!pi/4.
+while abs(median(axis0[0:nx/2-1,*])-median(axis0[nx/2:nx-1,*])) ge !pi/4 do begin
+    if (median(axis0[0:nx/2-1,*])-median(axis0[nx/2:nx-1,*])) ge !pi/4 then $
+      axis0[nx/2:nx-1,*]=axis0[nx/2:nx-1,*]+!pi/2.
+    if (median(axis0[0:nx/2-1,*])-median(axis0[nx/2:nx-1,*])) le -!pi/4 then $
+      axis0[0:nx/2-1,*]=axis0[0:nx/2-1,*]+!pi/2.
+endwhile
+axis=((axis0[0:nx/2-1,*]+poly_2d(axis0[nx/2:nx-1,*],kx,ky,1))/2.) mod (!pi/2)
+
+;retardation, pd of polarizer
+coe=hd[0].period/4./!pi/hd[0].exptime*$
+  sin(4.*!pi*hd[0].exptime/hd[0].period)
+if not keyword_set(mq) then begin
+    xp=coe*(amp[*,*,0]/amp4)[0:nx/2-1,*]
+    xm=poly_2d(coe*(amp[*,*,0]/amp4)[nx/2:nx-1,*],kx,ky,1)
+endif else begin
+    xp=poly_2d(coe*(amp[*,*,0]/amp4)[nx/2:nx-1,*],kx,ky,1)
+    xm=coe*(amp[*,*,0]/amp4)[0:nx/2-1,*]
+endelse
+ret=acos(((xp-xm-2.)/(xp-xm+2.))<1.>(-1.))
+pd=(xp-xm+2.)/(xp+xm)
+    ;ret=total(minmax(rebin(resarr[x1:x2,*],1,ny)))/2.    fringe
+xx=where(rebin(img,nx/2,1) ge mean(rebin(img,nx/2,1)))
+    ;if mean(ret[xx,*]) ge 1 then begin
+    ;    pd[*]=1
+    ;    ret=acos((xp-3.)/(xp+1.))
+    ;endif
+if mean(where(pd[xx,*] ge 1)) ne -1 then begin
+	pd[where(pd ge 1)]=1.
+	ret[where(pd ge 1)]=$
+          (acos((xp-3.)/(xp+1.)))[where(pd ge 1)]
+endif
+endif else begin;-----------------------------------------------------------
+
 	;ratio
-	ratio=amp4[0:nx/2-1,*]/poly_2d(amp4[nx/2:nx-1,*],kx,ky,1)
+	ratio=fltarr(nx/2,ny)-1.
+
 	;axis
 	axis0=atan(amp[*,*,5],amp[*,*,6])/4.
 	if keyword_set(mq) then $
@@ -2057,125 +1543,9 @@ if not keyword_set(single) then begin;----------------------------------
 	    if (median(axis0[0:nx/2-1,*])-median(axis0[nx/2:nx-1,*])) le -!pi/4 then $
 	      axis0[0:nx/2-1,*]=axis0[0:nx/2-1,*]+!pi/2.
 	endwhile
-	
-	;2014.12.26
-	maxis=median(axis0)
-	pos=where(abs(axis0+!pi/2.-maxis) le abs(axis0-maxis),npos)
-	if npos ge 1 then axis0[where(abs(axis0+!pi/2.-maxis) le abs(axis0-maxis))]=axis0[where(abs(axis0+!pi/2.-maxis) le abs(axis0-maxis))]+!pi/2.
-	pos=where(abs(axis0-!pi/2.-maxis) le abs(axis0-maxis),npos)
-	if npos ge 1 then axis0[where(abs(axis0-!pi/2.-maxis) le abs(axis0-maxis))]=axis0[where(abs(axis0-!pi/2.-maxis) le abs(axis0-maxis))]-!pi/2.
-
-	axis=((axis0[0:nx/2-1,*]+poly_2d(axis0[nx/2:nx-1,*],kx,ky,1))/2.) mod (!pi/2)
-		;retardation, pd of polarizer
-	if keyword_set(hspbs) or keyword_set(pbsret1) then begin
-		prof=reform(rebin(amp[0:nx/2-1,*,0],nx/2,1,1))
-		tmppos=where(prof ge max(prof)*.5,ntmppos)
-		h1x=tmppos[0]
-		h2x=tmppos[ntmppos-1]
-		h1y=0
-		h2y=ny-1
-		offset=median(axis[h1x:h2x,ny/2])
-		offsety=reform(rebin(axis[h1x:h2x,*],1,ny))-offset
-		offsety0=offsety
-		yy1=fix(findgen(float(h2y-h1y+1)/4)+h1y)
-		coe1=poly_fit(yy1,offsety[yy1],1,yfit=yfit1)
-		yy2=reverse(fix(h2y-findgen(float(h2y-h1y+1)/4)))
-		coe2=poly_fit(yy2,offsety[yy2],1,yfit=yfit2)
-		xx=-(coe1[0]-coe2[0])/(coe1[1]-coe2[1])
-		 if (xx le 0) or (xx ge (ny-1)) then xx=ny/2
-		offsety1=[coe1[1]*findgen(fix(xx)+1)+coe1[0],   $
-			coe2[1]*(findgen(ny-fix(xx)-1)+fix(xx)+1)+coe2[0]]
-	endif
-
-	if keyword_set(hspbs) or keyword_set(pbsret1) then begin  ; => 20161231 TA
-                ;left image
-                amps2l=(rot_amp(amp[0:nx/2-1,*,*],-offset,offsetx=0,offsety=-offsety1))[*,*,3]
-                ;right image
-                arr=amp[nx/2:nx-1,*,*]
-                ;for i=0,6 do arr[*,*,i]=poly_2d(arr[*,*,i],kx,ky,1)
-                amps2r=(rot_amp(arr,-offset,offsetx=0,offsety=-offsety1))[*,*,3]
-	endif                             ; <= 20161231 TA
-	coe=hd[0].period/4./!pi/hd[0].exptime*$
-	  sin(4.*!pi*hd[0].exptime/hd[0].period)
-	coe2=hd[0].period/2./!pi/hd[0].exptime*$
-	  sin(2.*!pi*hd[0].exptime/hd[0].period) ;20161231 TA
-	if not keyword_set(mq) then begin
-	    xp=coe*(amp[*,*,0]/(amp4>1e-20))[0:nx/2-1,*]
-	    xm=poly_2d(coe*(amp[*,*,0]/(amp4>1e-20))[nx/2:nx-1,*],kx,ky,1)
-	    if keyword_set(hspbs) or keyword_set(pbsret1) then begin     ; => 20161231 TA
-		invyp=-1./coe2*(amps2l/(amp[0:nx/2-1,*,0]>1e-20))
-		invym= 1./coe2*(amps2r/(amp[nx/2:nx-1,*,0]>1e-20))
-	    endif                                ; <= 20161231 TA
-	endif else begin
-	    xp=poly_2d(coe*(amp[*,*,0]/(amp4>1e-20))[nx/2:nx-1,*],kx,ky,1)
-	    xm=coe*(amp[*,*,0]/(amp4>1e-20))[0:nx/2-1,*]
-	    if keyword_set(hspbs) or keyword_set(pbsret1) then begin     ; => 20161231 TA
-		invyp=-1./coe2*(amps2r/(amp[nx/2:nx-1,*,0]>1e-20))
-		invym= 1./coe2*(amps2l/(amp[0:nx/2-1,*,0]>1e-20))
-	    endif                                ; <= 20161231 TA
-	endelse
-
-	xx=where(rebin(img,nx/2,1) ge mean(rebin(img,nx/2,1)))
-	ret=acos(((xp-xm-2.)/(xp-xm+2.))<1.>(-1.))
-	if (not keyword_set(hspbs)) and (not keyword_set(pbsret1)) then begin      ; for VSP
-		pd=(xp-xm+2.)/(xp+xm)
-	endif else begin                          ; for HSP   => 20161231 TA
-		mret=median(ret[xx,*])
-		ret1=[atan( (1.-cos(mret))*xp*invyp , 2.*sin(mret) ), $
-		      atan( (1.-cos(mret))*xm*invym , 2.*sin(mret) ) ]
-		if not keyword_set(mq) then begin
-			pd=2./cos(ret1[0:nx/2-1,*])/  $
-			   (xp*(1.-cos(ret)) - (1.+cos(ret)))
-		endif else begin
-			pd=2./cos(ret1[nx/2:nx-1,*])/  $
-			   (xp*(1.-cos(ret)) - (1.+cos(ret)))
-		endelse
-	endelse                                   ; <= 20161231 TA
-
-	    ;if mean(ret[xx,*]) ge 1 then begin
-	    ;    pd[*]=1
-	    ;    ret=acos((xp-3.)/(xp+1.))
-	    ;endif
-	if mean(where(pd[xx,*] ge 1)) ne -1 then begin
-		pd[where(pd ge 1)]=1.
-		ret[where(pd ge 1)]=$
-	        	  ;(acos((xp-3.)/(xp+1.)))[where(pd ge 1)]
-	       		(acos((xp-3.)/((xp+1.)>1e-20)))[where(pd ge 1)]
-	endif
-	if keyword_set(hspbs) or keyword_set(pbsret1) then begin
-		pbsret1=shift_img(ret1,[-shiftx,0])   ; => 20161231 TA
-
-		ret1=-ret1
-		ret1[nx/2:nx-1,*]=poly_2d(-ret1[nx/2:nx-1,*],kx,ky,1)
-		hspbs=sin(ret1)                              
-                if 0 then begin ; before 20161231
-			hspbs=fltarr(nx,ny)
-			;left image
-			amp1=rot_amp(amp[0:nx/2-1,*,*],-offset,offsetx=0,offsety=-offsety1)
-			hspbs[0:nx/2-1,*]=(3.+cos(ret))*amp1[*,*,3]/2./sin(ret)/amp[0:nx/2-1,*,0]
-			;right image
-			arr=amp[nx/2:nx-1,*,*]
-			for i=0,6 do arr[*,*,i]=poly_2d(arr[*,*,i],kx,ky,1)
-			amp1=rot_amp(arr,-offset,offsetx=0,offsety=-offsety1)
-			hspbs[nx/2:nx-1,*]=(1.-cos(ret))*amp1[*,*,3]/2./sin(ret)/amp1[*,*,0]
-		endif
-	endif
-endif else begin;-----------------------------------------------------------
-		;ratio
-	ratio=fltarr(nx/2,ny)-1.
-		;axis
-	axis0=atan(amp[*,*,5],amp[*,*,6])/4.
-	if keyword_set(mq) then $
-	  axis0[0:nx/2-1,*]=axis0[0:nx/2-1,*]+!pi/4. else $
-	  axis0[nx/2:nx-1,*]=axis0[nx/2:nx-1,*]+!pi/4.
-	while abs(median(axis0[0:nx/2-1,*])-median(axis0[nx/2:nx-1,*])) ge !pi/4 do begin
-	    if (median(axis0[0:nx/2-1,*])-median(axis0[nx/2:nx-1,*])) ge !pi/4 then $
-	      axis0[nx/2:nx-1,*]=axis0[nx/2:nx-1,*]+!pi/2.
-	    if (median(axis0[0:nx/2-1,*])-median(axis0[nx/2:nx-1,*])) le -!pi/4 then $
-	      axis0[0:nx/2-1,*]=axis0[0:nx/2-1,*]+!pi/2.
-	endwhile
 	axis=axis0[0:nx/2-1,*] mod (!pi/2)
-		;retardation, pd of polarizer
+
+	;retardation, pd of polarizer
 	coe=hd[0].period/4./!pi/hd[0].exptime*$
 	  sin(4.*!pi*hd[0].exptime/hd[0].period)
 	if not keyword_set(mq) then begin
@@ -2185,22 +1555,25 @@ endif else begin;-----------------------------------------------------------
 	endelse
 	pd=fltarr(nx/2,ny)+1.
 	ret=acos((xp-3.)/(xp+1.))
-endelse	
+endelse
 print, 'img ratio axis ret pd'
 res=[[[img]],[[ratio]],[[axis]],[[ret]],[[pd]]]
-	if keyword_set(check) then begin
-	    print,'check the offset angle of dual beam'
-	   plot_image,axis0
-	   ans=''
-	   read,ans
-	endif
-	if keyword_set(array) then goto,jump
+
+if keyword_set(check) then begin
+    print,'check the offset angle of dual beam'
+    plot_image,axis0
+    ans=''
+    read,ans
+endif
+
+if keyword_set(array) then goto,jump
 
 res1=fltarr(5)
 prof=reform(rebin(res[*,*,0],nx/2,1,1))
 pos=where(prof ge 0.9*median(prof))
 for i=0,4 do res1[i]=median(res[pos,*,i])
 res=res1
+
 
 jump:
 ;stop
@@ -2280,26 +1653,17 @@ END
 ; MODIFICATION HISTORY :
 ;        T.A. '??		
 ;        T.A. '2013/08/04/	version (mkiquv) 2		
-;        T.A. '2016/11/17/	linear		
-;        T.A. '2017/01/02/	pbsret1		
 ;-
 ;*************************************************************************
 pro dstsp_mkiquv,file,ret,offset,dark=dark,flat=flat,$     ;input 
                  iquv,hd,$                                 ;output
-	mkiquv_ver=mkiquv_ver,header=header,frate=frate,fringe=fringe,shiftr=shiftr,	$
-	ver=ver,useframe=useframe,data=data,datfit=datfit,ph=ph,                        $
-        offsetx=offsetx,offsety=offsety,orca=orca,outarr=outarr,                        $
-        linear=linear,pbsret1=pbsret1
+	mkiquv_ver=mkiquv_ver,header=header,frate=frate,fringe=fringe,shiftr=shiftr,ver=ver,useframe=useframe,data=data,datfit=datfit,ph=ph
 
 if not keyword_set(mkiquv_ver) then mkiquv_ver=2
 if not keyword_set(dark) then dark=0
 if not keyword_set(flat) then flat=0
 if not keyword_set(frate) then frate=0
-if not keyword_set(offsetx) then offsetx=0
-if not keyword_set(offsety) then offsety=0
-if not keyword_set(orca) then orca=0
-if not keyword_set(linear) then linear=0
-file2data,file,data,hd,dark=dark,flat=flat,ver=ver,orca=orca,linear=linear
+file2data,file,data,hd,dark=dark,flat=flat,ver=ver
 if keyword_set(shiftr) then begin
 	off=get_correl_offsets(data[shiftr[0]:shiftr[1],*,*])
 	off[1,*]=0
@@ -2321,9 +1685,6 @@ data=data[*,*,useframe2]
 ph=ph[useframe1]
 demodulation,data,ph,amp,err,datfit
 
-;amp1=rot_amp(amp,-offset,replicate(0,hd[0].naxis1))
-amp1=rot_amp(amp,-offset,offsetx=-offsetx,offsety=-offsety)
-if keyword_set(fringe) then amp1=nofringe_sin2(amp1,15*!dtor)
 case mkiquv_ver of
 	1:modu_coefficient1,$
 	  hd[0].exptime,hd[0].period,hd[0].wave,ret,0.,1.,$
@@ -2332,33 +1693,15 @@ case mkiquv_ver of
 	  hd[0].exptime,hd[0].period,hd[0].wave,ret,0.,1.,$
 	  ci1,ci2,cq1,cq2,cq3,cu1,cu2,cv1
 endcase
+amp1=rot_amp(amp,-offset,replicate(0,hd[0].naxis1))
+if keyword_set(fringe) then amp1=nofringe_sin2(amp1,15*!dtor)
 qq0 = amp1[*,*,6]/cq2
 uu0 = amp1[*,*,5]/cu2
-	tmpqq0=qq0;TEMP
-	tmpuu0=uu0;TEMP
-if (size(pbsret1))[0] eq 0 then begin ; for VSP => 20170102 TA
-	vv0 = amp1[*,*,3]/cv1
-	ii0 = (amp[*,*,0]-qq0*cq3)/ci1
-endif else begin                      ; for HSP
-	coe1=-hd[0].period/4./!pi*sin(2.*!pi*hd[0].exptime/hd[0].period)*sin(pbsret1)*sin(ret)
-	coe2=-hd[0].exptime*sin(pbsret1)*cos(ret)/2.
-	vv0=qq0
-	ii0=qq0
-	for iy=0,hd[0].naxis2-1 do begin
-		qq0[*,iy]=qq0[*,iy]/cos(pbsret1)
-		uu0[*,iy]=uu0[*,iy]/cos(pbsret1)
-		vv0[*,iy]=(amp1[*,iy,3] - coe1*qq0)/cv1/cos(pbsret1)
-		ii0[*,iy]=(amp[*,iy,0]-cos(pbsret1)*qq0[*,iy]*cq3 - coe2*vv0[*,iy])/ci1
-	endfor
-
-endelse                               ; <= 20170102 TA
+vv0 = amp1[*,*,3]/cv1
+ii0 = (amp[*,*,0]-qq0*cq3)/ci1
 iquv=[[[ii0]],[[qq0]],[[uu0]],[[vv0]]]
 
-tmpvv0 = amp1[*,*,3]/cv1;TEMP
-tmpii0 = (amp[*,*,0]-tmpqq0*cq3)/ci1;TEMP
-
-outarr=amp;for mainte
-
+;stop
 
 END
 ;************************************************************************
@@ -2414,78 +1757,22 @@ ii0 = (cc)/ci1
 iquv=[[[ii0]],[[qq0]],[[uu0]],[[vv0]]]
 
 end
+
+
+
+
+
+
+
 ;************************************************************************
-pro txt2hazd,dir,time,ha0,zd0,check=check,radius=radius,pangle=pangle,incli=incli,  $
-             gangle=gangle,irangle=irangle,azimuth=azimuth
+pro txt2hazd,dir,time,ha0,zd0,check=check,radius=radius,pangle=pangle,incli=incli,gangle=gangle
 
-; 20160830 T.A. read image rotator angle
-; 20161108 T.A. read azimuth angle
-; 20170502 T.A. if j ne 0
-
-if keyword_set(azimuth) then begin
-    nline=10
-endif else begin
-    nline=9
-endelse
 files=file_search(dir,'20*.txt',count=nf)
-i=0l
-hazd=''
-while hazd[0] eq '' do begin 
-	if 0 then begin
-		hazd=rd_tfile(files[i],nline-1) 	;20160831 comment out
-	endif else begin
-		hazd0=strarr(nline)
-		str=''
-		j=0l
-;print,files[i]
-		openr,lun,files[i],/get_lun
-		while EOF(lun) ne 1 do begin
-			readf,lun,str
-			pos=strpos(str,':')
-			hazd0[0]=strmid(str,0,pos+1)
-			str=strmid(str,pos+1,strlen(str)-pos)
-			for k=0,nline-3 do begin
-				pos=strpos(str,';')
-				hazd0[k+1]=strmid(str,0,pos+1)
-				str=strmid(str,pos+1,strlen(str)-pos)
-			endfor
-			hazd0[nline-1]=str
-			if j eq 0 then hazd=hazd0 else hazd=[[hazd],[hazd0]]
-			j=j+1l
-		endwhile
-		free_lun,lun
-	endelse
-	i=i+1l
-endwhile
+hazd=rd_tfile(files[0],7)
 for i=0,nf-1 do begin
-	if 0 then begin
-		hazd1=rd_tfile(files[i],nline-1)   ;20160831 comment out
-	endif else begin
-		hazd0=strarr(nline)
-		str=''
-		j=0l
-		openr,lun,files[i],/get_lun
-		while EOF(lun) ne 1 do begin
-			readf,lun,str
-			pos=strpos(str,':')
-			hazd0[0]=strmid(str,0,pos+1)
-			str=strmid(str,pos+1,strlen(str)-pos)
-			for k=0,nline-3 do begin
-				pos=strpos(str,';')
-				hazd0[k+1]=strmid(str,0,pos+1)
-				str=strmid(str,pos+1,strlen(str)-pos)
-			endfor
-			hazd0[nline-1]=str
-			if j eq 0 then hazd1=hazd0 else hazd1=[[hazd1],[hazd0]]
-			j=j+1l
-		endwhile
-		free_lun,lun
-	endelse
-	if j ne 0 then begin ;20170502 T.A.
-		if mean(hazd1 ne '') then hazd=[[hazd],[hazd1]]
-	endif                ;20170502 T.A.
+	hazd1=rd_tfile(files[i],7)
+	if mean(hazd1 ne '') then hazd=[[hazd],[hazd1]]
 endfor
-
 time=float(strmid(hazd[0,*],12,2))+$
 	60.*float(strmid(hazd[0,*],10,2))+$
 	60.^2 *float(strmid(hazd[0,*],8,2))
@@ -2499,8 +1786,6 @@ radius=rdm*60+rds		;arcsec
 pangle=float(hazd[4,*])/3600.	;deg
 incli=float(hazd[5,*])/3600.	;deg
 gangle=float(hazd[6,*])/3600.	;deg
-irangle=float(hazd[8,*])	;deg
-if keyword_set(azimuth) then azimuth=(float(hazd[9,*])/3600. + 180.) ;deg
 
 if keyword_set(check) then begin
 	ha=ha0/3600.*15.*!dtor
@@ -2510,807 +1795,59 @@ if keyword_set(check) then begin
 	plot,time/3600.,ha*!radeg,psym=3,yr=[-100,100],/ystyle
 	oplot,time/3600.,zd*!radeg,psym=3
 endif
+
 END
+;::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+function index_form
+
+hn={dstsp_v1                    ,$
+     SIMPLE  : 0        ,$
+     BITPIX  : 0l       ,$
+     NAXIS   : 0l       ,$
+     NAXIS1  : 0l       ,$
+     NAXIS2  : 0l       ,$
+     NAXIS3  : 0l       ,$
+     EXTEND  : 0        ,$
+     BSCALE  : 0l       ,$
+     BZERO   : 0l       ,$
+     ORIGIN  : ''       ,$
+     OBSERVAT: ''       ,$
+     TELESCOP: ''       ,$
+     INSTRUME: ''       ,$
+     PROGRAM : ''       ,$
+     PROG_VER: 0        ,$
+     OBS_TYPE: ''       ,$
+     POLSTATE: ''       ,$
+     TIMESYS : ''       ,$
+     DATE    : ''       ,$
+     DATE_OBS: ''       ,$
+     DATE_END: ''       ,$
+     WVPLATE : ''       ,$     
+     PERIOD  : 0d       ,$
+     DETNAM  : ''       ,$            
+     DET_TMP : 0l       ,$             
+     DET_PWR : 0l       ,$             
+     EXPTIME : 0d       ,$
+     CAMGAIN : 0l       ,$
+     FGBINX  : 0l       ,$
+     FGBINY  : 0l       ,$
+     X0      : 0l       ,$
+     X1      : 0l       ,$
+     Y0      : 0l       ,$
+     Y1      : 0l      ,$
+     WAVE    : ''       ,$
+     R       : 0d       ,$
+     P       : 0d       ,$
+     I       : 0d       ,$
+     HA      : 0d       ,$
+     ZD      : 0d       ,$
+     COMMENT : strarr(15)      ,$
+     HISTORY : strarr(5)       $
+     }
+
+return,hn
+end
 ;--------------------------------------------------------------
-;************************************************************************
-;*************** APPLICATIONS *******************************************
-;************************************************************************
-pro mkdark_orca4,files,		$;input
-	darks,dh,outfile=outfile		;output
-;VRIABLES
-;outfile='/fwork/anan/save/20141123_1.sav'       ; file name for save
-;files=file_search('/mnt/HDD3TBn3/DST/sp/20140902/orca4/','dark_*.fits',count=nf) ; file names for dark
-print,'DARK'
-nx0=2048
-ny0=2048
-ss=size(files)
-if ss[0] eq 0 then nf=1 else nf=ss[1]
-darks=fltarr(nx0,ny0,nf)
-for i=0,nf-1 do begin
-        print,i,nf
-        ;read_orca,files[i],index,data
-	file2data,files[i],data,index,ver=1,orca=1
-        nx=index[0].naxis1
-        ny=index[0].naxis2
-        darks[0:nx-1,0:ny-1,i]=float(reform(rebin(data,nx,ny,1)))
-        if i eq 0 then dh=index[0] else dh=[dh,index[0]]
-endfor
-
-if keyword_set(outfile) then save,darks,dh,file=outfile
-
-END
-;--------------------------------------------------------------
-pro mkdark_xeva640,files,		$;inputs
-	darks,dh,outfile=outfile	;outfile
-;VRIABLES
-;outfile='/fwork/anan/save/20150109_3.sav'       ; file name for save
-;files=file_search('/mnt/HDD3TBn3/DST/sp/20140902/XEVA640/','dark_*.fits',count=nf) ; file names for dark
-print,'DARK'
-nx0=640
-ny0=512
-ss=size(files)
-if ss[0] eq 0 then nf=1 else nf=ss[1]
-darks=fltarr(nx0,ny0,nf)
-for i=0,nf-1 do begin
-        print,i,nf
-        mreadfits,files[i],index,data          ; 20161110 TA
-	;file2data,files[i],data,index,ver=1   ;comout 20161110 TA
-        nx=index[0].naxis1
-        ny=index[0].naxis2
-        darks[0:nx-1,0:ny-1,i]=despike_gen(float(reform(rebin(data,nx,ny,1))))
-        if i eq 0 then dh=index[0] else dh=[dh,index[0]]
-endfor
-if keyword_set(outfile) then save,darks,dh,file=outfile
-
-END
-;--------------------------------------------------------------
-pro mkdark_ge1650,files,		$;inputs
-	darks,dh,outfile=outfile	;outfile
-;VRIABLES
-;outfile='/fwork/anan/save/20150109_3.sav'       ; file name for save
-;files=file_search('/mnt/HDD3TBn3/DST/sp/20140902/XEVA640/','dark_*.fits',count=nf) ; file names for dark
-print,'DARK'
-nx0=1600
-ny0=1200
-ss=size(files)
-if ss[0] eq 0 then nf=1 else nf=ss[1]
-darks=fltarr(nx0,ny0,nf)
-for i=0,nf-1 do begin
-        print,i,nf
-        ;mreadfits,files[i],index,data
-	file2data,files[i],data,index,ver=1
-        nx=index[0].naxis1
-        ny=index[0].naxis2
-        darks[0:nx-1,0:ny-1,i]=float(reform(rebin(data,nx,ny,1)))
-        if i eq 0 then dh=index[0] else dh=[dh,index[0]]
-endfor
-if keyword_set(outfile) then save,darks,dh,file=outfile
-
-END
-;--------------------------------------------------------------
-pro mkkxky_orca4,files,		$;input
-	;mergin=mergin,          $ comout 20161227 TA
-	merginx=merginx,merginy=merginy, $  ;20161227 TA
-        offx=offx,offy=offy,camera=camera,$;keywords
-	kx,ky,shiftx1,kxkyh,outfile=outfile;outputs
-; VARIABLES
-;outfile='/fwork/anan/save/20150102_2.sav'
-;files=(file_search('/mnt/HDD3TBn3/DST/sp/20140902/orca4/','pq*4101*.fits',count=nf))[10]
-;mergin=5        ;pix
-;
-; camera	ge1650, orca4, xeva640
-
-;fine tuning
-;offx=[0.0,0.,0.,0.];left-low,left-up,right-low,right-up
-;offy=[0.,0.,0.,0.]
-if not keyword_set(merginx) then merginx=5 ; 20161227 TA
-if not keyword_set(merginy) then merginy=5 ; 20161227 TA
-if not keyword_set(offx) then offx=[0.,0.,0.,0.]
-if not keyword_set(offy) then offy=[0.,0.,0.,0.]
-if not keyword_set(camera) then camera='orca4'
-
-print,'kx, ky'
-ss=size(files)
-if ss[0] eq 0 then nf=1 else nf=(size(files))[1]
-for i=0,nf-1 do begin
-        print,i,nf
-	case camera of 
-		'ge1650':mreadfits,files[i],index,data
-		'xeva640':mreadfits,files[i],index,data
-		'orca4':read_orca,files[i],index,data
-	endcase
-        nx=index[0].naxis1
-        ny=index[0].naxis2
-        if i eq 0 then begin
-                print,nx,ny
-                arrs=fltarr(nx,ny,nf)
-                kxkyh=index[0]
-        endif
-        arrs[0:nx-1,0:ny-1,i]=float(reform(rebin(data,nx,ny,1)))
-endfor
-flat0=reform(rebin(arrs,nx,ny,1))
-if 0 then begin;--------------------------------------------------------
-;if camera eq 'xeva640' then begin
-	;arr0=fltarr(nx,ny)
-	;arr0[where(flat0 ge mean(flat0)/5.)]=0.
-	;pospos=where(flat0 le mean(flat0)/5.,npospos)
-	;if npospos ne 0 then begin
-	;	arr0[pospos]=1.
-	;endif else begin
-		;pospos=where(flat0 le mean(flat0)/4.,npospos)
-		;if npospos ne 0 then begin
-		;	arr0[pospos]=1.
-		;endif else begin
-		;	pospos=where(flat0 le mean(flat0)/3.,npospos)
-		;	if npospos ne 0 then begin
-		;		arr0[pospos]=1.
-		;	endif else begin
-		;		pospos=where(flat0 le mean(flat0)/2.,npospos)
-		;		if npospos ne 0 then begin
-		;			arr0[pospos]=1.
-		;		endif else begin
-	;				pospos=where(flat0 le mean(flat0),npospos)
-	;				arr0[pospos]=1.
-		;		endelse
-		;	endelse
-		;endelse
-	;endelse
-
-	set_plot,'x'
-	wdef,0,800,600
-	!p.multi=0
-	hmin=min(flat0)
-	hmax=max(flat0)
-	nbin=100
-	xh=findgen(nbin)/float(nbin-1)*(hmax-hmin)+hmin
-	plot,xh,histogram(flat0,min=hmin,max=hmax,nbin=nbin),	$
-		xtitle='DN',ytitle='# of sample'
-	thr=0.
-	read,'threshold:',thr
-
-        arr0=fltarr(nx,ny)
-        arr0[where(flat0 ge thr)]=0.
-        pospos=where(flat0 le thr,npospos)
-	arr0[pospos]=1.
- 
-	arr0=arr0[*,ny/3:ny/3*2]
-	label=label_region(arr0)
-	hist=histogram(label,min=0,max=10,nbin=11)
-	;shiftx1=nx/2-median((where(label eq median((sort(hist))[8:10])) mod nx))
-	shiftx1=nx/2-median((where(label eq 0) mod nx))
-endif;---------------------------------------------------------
-	set_plot,'x'
-	wdef,0,800,600
-	!p.multi=0
-	loadct,0
-	plot_image,flat0
-	print,'click center between left and right images'
-	xycursor,x,y
-
-	shiftx1=nx/2-x
-;endif else begin
-;	shiftx1=nx/2-(centroid(flat0<mean(flat0)/2.))[0]
-;endelse
-arr=shift_img(flat0,[shiftx1,0])
-
-limg=arr[0:nx/2-1,*]
-limg=limg/max(rebin(limg,nx/2,1))
-rimg=arr[nx/2:nx-1,*]
-rimg=rimg/max(rebin(rimg,nx/2,1))
-shiftx0=(centroid(limg))[0]-(centroid(rimg))[0]
-rimg0=shift_img(rimg,[shiftx0,0.])
-;stop
-
-wx=500.
-wy=600.
-factorx=wx/nx*2.
-factory=wy/ny
-for ii=0,1 do begin
-        wdef,ii*2,wx,wy
-        case ii of
-                0:begin
-                        lrimg=limg
-                end
-                1:begin
-                        lrimg=rimg
-                end
-        endcase
-
-        tvscl,congrid(lrimg,wx,wy)
-        print,'click left hair line'
-        cursor,/dev,h1x,h1y
-        h1x=h1x/factorx
-        h1y=h1y/factory
-        wait,1.
-        print,'click right hair line'
-        cursor,/dev,h2x,h2y
-        h2x=h2x/factorx
-        h2y=h2y/factory
-        wait,1.
-        print,'click lower spectral line'
-        cursor,/dev,l1x,l1y
-        l1x=l1x/factorx
-        l1y=l1y/factory
-        wait,1.
-        print,'click upper spectral line'
-        cursor,/dev,l2x,l2y
-        l2x=l2x/factorx
-        l2y=l2y/factory
-        wait,1.
-
-        plot_image,lrimg
-
-        yy=findgen(abs(l2y-l1y))+min([l2y,l1y])
-        xx=fltarr(abs(l2y-l1y))
-        ;dd=mergin ;comout 20161227
-        dd=merginx ;20161227
-        for i=0,1 do begin
-                case i of
-                        0:hx=h1x
-                        1:hx=h2x
-                endcase
-                for iy=0,(size(yy))[1]-1 do begin
-                        tmp=min(lrimg[hx-dd:hx+dd,yy[iy]],pos)
-                        xx[iy]=pos+hx-dd
-                endfor
-                coe=poly_fit(yy,xx,1,yfit=yfit)
-                oplot,yfit,yy,psym=3
-                case i of
-                        0:begin
-                                coeh1=coe
-                        end
-                        1:begin
-                                coeh2=coe
-                        end
-                endcase
-        endfor
-
-        xx=findgen(abs(h1x-h2x))+min([h1x,h2x])
-        yy=fltarr(abs(h1x-h2x))
-        ;dd=mergin ;comout 20161227
-        dd=merginy ;20161227
-        for i=0,1 do begin
-                case i of
-                        0:ly=l1y
-                        1:ly=l2y
-                endcase
-                for ix=0,(size(xx))[1]-1 do begin
-                        tmp=min(lrimg[xx[ix],ly-dd:ly+dd],pos)
-                        yy[ix]=pos+ly-dd
-                endfor
-                coe=poly_fit(xx,yy,1,yfit=yfit)
-                ;oplot,xx,yfit,psym=3
-                oplot,xx,yfit,line=0
-                oplot,xx,yy,psym=3
-                case i of
-                        0:begin
-                                coel1=coe
-                        end
-                        1:begin
-                                coel2=coe
-                        end
-                endcase
-        endfor
-
-        case ii of
-                0:begin
-                        coelh1=coeh1
-                        coelh2=coeh2
-                        coell1=coel1
-                        coell2=coel2
-                end
-                1:begin
-                        coerh1=coeh1
-                        coerh2=coeh2
-                        coerl1=coel1
-                        coerl2=coel2
-                end
-        endcase
-wait,1.
-endfor
-
-jump:
-xi=fltarr(4)
-yi=fltarr(4)
-xo=fltarr(4)
-yo=fltarr(4)
-for i=0,3 do begin
-        case i of
-                0:begin
-                        bl=coelh1
-                        br=coerh1
-                        al=coell1
-                        ar=coerl1
-                end
-                1:begin
-                        bl=coelh1
-                        br=coerh1
-                        al=coell2
-                        ar=coerl2
-                end
-                2:begin
-                        bl=coelh2
-                        br=coerh2
-                        al=coell1
-                        ar=coerl1
-                end
-                3:begin
-                        bl=coelh2
-                        br=coerh2
-                        al=coell2
-                        ar=coerl2
-                end
-        endcase
-
-        xi[i]=(al[0]*bl[1]+bl[0])/(1.-al[1]*bl[1])
-        xo[i]=(ar[0]*br[1]+br[0])/(1.-ar[1]*br[1])
-        yi[i]=(al[1]*bl[0]+al[0])/(1.-al[1]*bl[1])
-        yo[i]=(ar[1]*br[0]+ar[0])/(1.-ar[1]*br[1])
-        plots,xi[i],yi[i],psym=2
-endfor
-;xo=xo-off[0]+offx
-;yo=yo-off[1]+offy
-xo=xo+offx
-yo=yo+offy
-polywarp,xo,yo,xi,yi,1,kx,ky
-rimg3=poly_2d(rimg,kx,ky,1)
-
-wdef,1,600,800
-plot_image,limg-rimg3
-
-if keyword_set(outfile) then save,kx,ky,shiftx1,kxkyh,file=outfile
-END
-;---------------------------------
-pro anref_orca,files,darkfile,kxkyfile,mq=mq,	$;inputs
-	rets,offsets,offsetys,ratios,frates,refh,outfile=outfile 
-;============================
-; VARIABLES
-;outfile='/fwork/anan/save/20150102_3.sav'
-;darkfile='/fwork/anan/save/20141123_1.sav'
-;kxkyfile=['/fwork/anan/save/20150102_1.sav','/fwork/anan/save/20150102_2.sav']
-;files=file_search('/mnt/HDD3TBn3/DST/sp/20140902/orca4/','pq*4101*.fits',count=nf)
-;mq=0		; 0 for +Q, 1 for -Q
-;============================
-print,'retardation, offset angle, ratio, phase'
-
-restore,darkfile
-
-ss=size(kxkyfile)
-if ss[0] eq 0 then nf=1 else nf=ss[1]
-kxs=fltarr(4,nf)
-kys=fltarr(4,nf)
-for i=0,nf-1 do begin
-	restore,kxkyfile[i]
-	kxs[*,i]=kx
-	kys[*,i]=ky
-	if i eq 0 then begin
-		shiftx1s=shiftx1
-		tmp=kxkyh
-	endif else begin
-		shiftx1s=[shiftx1s,shiftx1]
-		tmp=[tmp,kxkyh]
-	endelse
-endfor
-kxkyh=tmp
-
-ss=size(files)
-if ss[0] eq 0 then nf=1 else nf=ss[1]
-rets=fltarr(nf)
-offsets=fltarr(nf)
-ratios=fltarr(nf)
-frates=fltarr(nf)
-for i=0,nf-1 do begin
-	print,i+1,nf
-	read_orca,files[i],index,data
-	hd=index[0]
-	nx=hd.naxis1
-	ny=hd.naxis2
-	nt=hd.naxis3
-
-	dark=reform(rebin(darks[0:nx-1,0:ny-1,selectdark(dh,index[0])],nx,ny,1))
-
-	pos=selectkxky(kxkyh,index[0])
-	if pos[0] ne -1 then begin
-		kx=kxs[*,pos]
-		ky=kys[*,pos]
-		shiftx1=shiftx1s[pos]
-	endif else begin
-		print,'no kx, ky'
-		stop
-	endelse
-
-	;restore,savfile
-	data=reform((rebin(data[0:nx/2-1-shiftx1,*,*],1,ny,nt))[0,ny/2,1:*])
-	xx=findgen(nt-1)+1.
-	yfit=ta_sinfit_mpfit(xx,data,av=av,amp=amp,k=k,ph=ph,tprint=0)
-	wdef,1,400,400
-	plot,xx,data,psym=1
-	oplot,xx,yfit
-
-	;frate=2.*!pi/median(par10[1,2,*])*4.
-	frates[i]=2.*!pi/k*4.
-	;ref=ref2irarp(files,dark,kx,ky,mq=mq,header=0,array=1,ver=1,orca=1,shiftx=shiftx1,frate=frate);single=1)
-	ref=ref2irarp(files[i],dark,kx,ky,header=0,array=1,ver=1,orca=1,shiftx=shiftx1,frate=frates[i]);single=1)
-
-	;if i eq 0 then begin
-	if (i ne 0) then if selectkxky(refh[(i-1)>0],index[0]) ne -1 then goto,skip
-	wx=500.
-	wy=600.
-	factorx=wx/nx*2.
-	factory=wy/ny
-	wdef,0,wx,wy
-	tvscl,congrid(ref[*,*,0],wx,wy)
-	print,'click left-lower corner 1'
-	cursor,/dev,h1x,h1y
-	h1x=h1x/factorx
-	h1y=h1y/factory
-	wait,1.
-	print,'click right-upper corner 2'
-	cursor,/dev,h2x,h2y
-	h2x=h2x/factorx
-	h2y=h2y/factory
-	wait,1.
-	offsetys=fltarr(ny,nf)
-	skip:
-	
-	rets[i]=median(ref[h1x:h2x,h1y:h2y,3])
-	offsets[i]=median(ref[h1x:h2x,ny/2,2])
-	ratios[i]=median(ref[h1x:h2x,h1y:h2y,1])
-	offsety=reform(rebin(ref[h1x:h2x,*,2],1,ny))-offsets[i]
-
-	offsety0=offsety
-	yy1=fix(findgen(float(h2y-h1y+1)/4)+h1y)
-	coe1=poly_fit(yy1,offsety[yy1],1,yfit=yfit1)
-	yy2=reverse(fix(h2y-findgen(float(h2y-h1y+1)/4)))
-	coe2=poly_fit(yy2,offsety[yy2],1,yfit=yfit2)
-	xx=-(coe1[0]-coe2[0])/(coe1[1]-coe2[1])
-	offsetys[*,i]=[coe1[1]*findgen(fix(xx)+1)+coe1[0],coe2[1]*(findgen(ny-fix(xx)-1)+fix(xx)+1)+coe2[0]]
-
-	print,'retardation (deg)',rets[i]*!radeg
-	print,'ratio',ratios[i]
-	print,'frame rate (Hz)',frates[i]
-	print,'offset angle (deg)',offsets[i]*!radeg
-	wdef,2,400,400
-	plot,(offsets[i]+offsetys[*,i])*!radeg,xstyle=1,xtitle='Y (pix)',ytitle='offset angle (deg)'
-	oplot,(offsets[i]+offsety0)*!radeg
-
-	jump:
-	if i eq 0 then refh=hd else refh=[refh,hd]
-endfor
-
-if keyword_set(outfile) then save,rets,offsets,offsetys,ratios,frates,refh,file=outfile
-print,'retardation (deg)',mean(rets)*!radeg
-print,'ratio',mean(ratios)
-print,'frame rate (Hz)',mean(frates)
-wdef,2,400,400
-plot,(offsets[nf-1]+offsetys[*,nf-1])*!radeg,xstyle=1,xtitle='Y (pix)',ytitle='offset angle (deg)'
-oplot,(offsets[nf-1]+offsety0)*!radeg
-
-
-END
-;---------------------------------
-pro main,files,darkfile,flatfile,kxkyfile,hazdfile,reffile,dst,		$;inputs
-	orca4=orca4,	$
-	signv=signv,	$; 1 for +V, -1 for -V, sign of V of induceing light to slit
-	minus=minus,	$; 0 for normal camera setting, 1 for reverse
-	abcd=abcd,	$; Kuhn's method
-	limb=limb,	$; rotate +Q axis to parallel limb
-	remove_icrosstalk=remove_icrosstalk,	$; [x1,x2,y1,y2], range of continuum to subtract crosstalk from I
-	sky=sky,	$; [x1,x2,y1,y2], range of continuum to subtract sky
-	linear=linear,	$; linearity of detector, 1)linear 2)non linear for XEVA640
-	iquv,hds,outfile=outfile,slitiquv=slitiquv,dualiquv=dualiquv,outarr=outarr						;outputs
-
-; HISTORY
-; 2015.01.31 T.A.
-;
-; 2016.07.04 T.A. repair time0
-
-;VRIABLES
-;files=(file_search('/mnt/HDD3TBn3/DST/sp/20140902/orca4/','sp08542*.fits',count=nf))
-;outfile='/fwork/anan/save/20141214_5.sav'
-;darkfile='/fwork/anan/save/20141123_1.sav'	darks, dh
-;flatfile='/fwork/anan/save/20141123_2.sav'	flat
-;kxkyfile='/fwork/anan/save/20141214_1.sav'	kxkyh, kxs, kys, shiftx1s
-;hazdfile='/fwork/anan/save/20141123_4.sav'	time, ha0, zd0, radius, pangle, incli 
-;reffile='/fwork/anan/save/20141214_2.sav'	refh, rets, offsets, offsetys, ratios, frates
-
-;Kuhn's abcd
-;restore,'/fwork/anan/save/20141214_4.sav'	abcd
-
-if not keyword_set(orca4) then orca=0. else orca=1
-if not keyword_set(signv) then signv=1.
-if not keyword_set(minus) then minus=0.
-if not keyword_set(linear) then linear=0.
-cutfov=0                ; 1 for cut FOV, 0 for full FOV
-;signv=1.                ; 1. for +V, -1. for -V 
-;minus=0                 ; 0 for normal camera setting, 1 for reverse
-; DST parameters
-;xn=-0.0485             ; diattenuation of Neuton mirror
-;tn=-12.44*!dtor                ; retardation of Neuton mirror (radian)
-;xc=-0.0327             ; diattenuation of Coude mirror
-;tc=24.41*!dtor         ; retardation of Coide mirror (radian)
-;sc=0.0182              ; scattring in telescope
-
-;wvl=4101.
-;wvls=[4226.,4861.,5890.,6303.,6563.,8498.,8542.,8662.,10830.]
-;xn=interpol([-0.0333,-0.0344,-0.03295,-0.0424,-0.04297,-0.0473,-0.0459,-0.0464,-0.020],wvls,wvl); diattenuation of Neuton mirror
-;tn=interpol([-25.27,-24.7,-23.98,-18.09,-17.73,-15.7,-15.7,-15.7,-10.3]*!dtor,wvls,wvl) ; retardation of Neuton mirror (radian)
-;xc=interpol([-0.0274,-0.0278,-0.0436,-0.03615,-0.038855,-0.0029,-0.0019,0.0031,0.020],wvls,wvl); diattenuation of Coude mirror
-;tc=interpol([-14.2,1.58,24.1,26.02,29.72,31.71,31.29,29.97,-5.]*!dtor,wvls,wvl) ; retardation of Coide mirror (radian)
-;sc=0.0          ; scattring in telescope
-;xn=dst[0]
-;tn=dst[1]
-;xc=dst[2]
-;tc=dst[3]
-;sc=dst[4]
-;============================
-print,'make IQUV'
-
-
-fringe=0
-restore,darkfile
-restore,flatfile
-
-ss=size(kxkyfile)
-if ss[0] eq 0 then nf=1 else nf=ss[1]
-for i=0,nf-1 do begin
-        restore,kxkyfile[i]
-	if i eq 0 then begin
-		ss=size(kx)
-		if ss[0] eq 2 then nk=1 else nk=ss[3]
-		kxs=fltarr(4,nf*nk)
-		kys=fltarr(4,nf*nk)
-	endif
-	for ik=0,nk-1 do begin
-	        kxs[*,i*nk+ik]=kx[*,*,ik]
-        	kys[*,i*nk+ik]=ky[*,*,ik]
-	endfor
-        if i eq 0 then begin
-                shiftx1s=shiftx1
-                tmp=kxkyh
-        endif else begin
-                shiftx1s=[shiftx1s,shiftx1]
-                tmp=[tmp,kxkyh]
-        endelse
-endfor
-kxkyh=tmp
-
-restore,hazdfile
-restore,reffile
-ss=size(files)
-if ss[0] eq 0 then nf=1 else nf=ss[1]
-;---------------
-ss=0b;!NULL
-darkfile=0b;!NULL
-flatfile=0b;!NULL
-kx=0b;!NULL
-ky=0b;!NULL
-shiftx1=0b;!NULL
-hazdfile=0b;!NULL
-reffile=0b;!NULL
-;---------------
-key=1
-for i=0,nf-1 do begin
-;if i ge 2 and i le 54 then goto,jump
-        print,i,nf
-        if keyword_set(orca4) then begin
-		read_orca,files[i],index,data,/nodata
-	endif else begin
-		mreadfits,files[i],index,data,/nodata
-	endelse
-
-        hn=index[0]
-	index=0b;!NULL
-        nx=hn.naxis1
-        ny=hn.naxis2
-        ;time0=(float(strmid(hn.date_obs,11,2))+9.)*60d*60d +$
-	if keyword_set(orca4) then begin
-        	time0=(float(strmid(hn.date_obs,11,2)))*60d*60d +$
-                	float(strmid(hn.date_OBS,14,2))*60d +$
-                	float(strmid(hn.date_OBS,17,6))
-	endif else begin
-        	time0=(float(strmid(hn.date_obs,11,2))+9.)*60d*60d +$
-                	float(strmid(hn.date_OBS,14,2))*60d +$
-                	float(strmid(hn.date_OBS,17,6))
-		if time0 ge (24.*3600.) then time0=time0 - (24.*60.*60.) ; repair T.A. 20160704
-	endelse
-        hn.ha=interpol(ha0,time,time0)
-        hn.zd=interpol(zd0,time,time0)
-        hn.r=interpol(radius,time,time0)
-        hn.p=interpol(pangle,time,time0)
-        hn.i=interpol(incli,time,time0)
-	;1az=interpol(azimuth,time,time0)*!dtor  ;rad
-	az=hd2az(hn);rad
-	if n_elements(irangle) ge 1 then ir=interpol(irangle,time,time0)*!dtor  ;rad
-	;time0=0b;!NULL
-
-        dpos=selectdark(dh,hn)
-	if dpos[0] eq -1 then begin
-		print,'no dark'
-		goto,jump
-	endif
-        dark=reform(rebin(darks[0:nx-1,0:ny-1,dpos],nx,ny,1))
-
-	if min(flats) eq 1 then begin
-        	fpos=selectkxky(fh,hn)
-		if fpos[0] eq -1 then begin
-			print,'no flat'
-			flat=fltarr(nx,ny)+1.
-		endif else begin
-			flat=reform(rebin(flats[0:nx-1,0:ny-1,fpos],nx,ny,1))
-		endelse
-	endif else begin
-		flat=flats
-	endelse
-
-        pos=selectkxky(kxkyh,hn[0])
-        if pos[0] ne -1 then begin
-                kx=kxs[*,pos]
-                ky=kys[*,pos]
-                shiftx1=shiftx1s[pos]
-        endif else begin
-                print,'no kx, ky'
-                goto,jump
-        endelse
-
-        ret=median(rets[selectref(refh,hn)])
-        offset=median(offsets[selectref(refh,hn)])
-        ratio=median(ratios[selectref(refh,hn)])
-	frate=median(frates[selectref(refh,hn)])
-        offsety=reform(rebin(offsetys[*,selectref(refh,hn)],ny,1))
-        if (size(hspbs03s))[0] ge 1 then hspbs03=reform(rebin(hspbs03s[*,*,selectref(refh,hn)],nx,ny,1))
-        if (size(pbsret1s))[0] ge 1 then pbsret1=reform(rebin(pbsret1s[*,*,selectref(refh,hn)],nx,1,1)) else pbsret1=0
-        print,'retardation (deg)',ret*!radeg
-        print,'ratio',ratio
-        print,'offset',offset*!radeg
-        print,'frame rate (Hz)',frate
-
-        dstsp_mkiquv,files[i],ret,offset,dark=dark,flat=flat,$
-                iquv0,hd,$
-                header=hn,fringe=fringe,ver=1,frate=frate,   $
-		offsetx=0,offsety=offsety,orca=orca,	     $
-		outarr=outarr,linear=linear,pbsret1=pbsret1
-                ;header=hn,fringe=fringe,ver=1,offsetx=0,offsety=offsety,orca=orca,outarr=outarr
-	for jj=0,3 do  iquv0[*,*,jj]=shift_img(iquv0[*,*,jj],[shiftx1,0])
-        ;iquv1=dstsp_dualfit(iquv0,kx,ky,ratio,minus=minus,hspbs03=0,ret=ret)
-        iquv1=dstsp_dualfit(iquv0,kx,ky,ratio,minus=minus,ret=ret)
-        iquv1[*,*,3]=signv*iquv1[*,*,3]
-
-	; Cut and DST parameters
-        ;if i eq 0 then begin
-        if key then begin
-                if cutfov then begin
-                        facx=700./(nx/2.)
-                        facy=700./ny
-                        wdef,0,700,700;nx/8,ny/8
-                        tvscl,congrid(iquv1[*,*,0],700,700,1)
-                        print,'click left-lower corner 1'
-                        cursor,/dev,x1,y1
-                        wait,1.
-                        print,'click right-upper corner 2'
-                        cursor,/dev,x2,y2
-                        wait,1.
-                        x1=fix(x1/facx)
-                        x2=fix(x2/facx)
-                        y1=fix(y1/facy)
-                        y2=fix(y2/facy)
-                endif else begin
-                        x1=0
-                        x2=nx/2-1
-                        y1=0
-                        y2=ny-1
-                endelse
-                nnx=(x2-x1+1)
-                nny=(y2-y1+1)
-                ;iquv=fltarr(nnx,nny,4,nf)
-                ;slitiquv=fltarr(nnx,nny,4,nf)
-                iquv=fltarr(1024,2048,4,nf)
-                slitiquv=fltarr(1024,2048,4,nf)
-                dualiquv=fltarr(1024*2,2048,4,nf)
-		if n_elements(dst) eq 5 then begin
-                	par=par_dst(hd[0])
-                	par.xn=dst[0];xn
-                	par.tn=dst[1];tn
-                	par.xc=dst[2];xc
-                	par.tc=dst[3];tc
-                	par.sc=dst[4];sc
-			hsp=0
-		endif else begin
-			par=dst
-			hsp=1
-		endelse
-                hds=hd
-		key=0
-        endif else hds=[hds,hd]
-	if cutfov eq 0 then begin
-		x1=0
-		x2=nx/2-1
-		y1=0
-		y2=ny-1
-	endif
-	if x1 lt 0 or x2 ge nx or y1 lt 0 or y2 ge ny then goto,jump
-;help,slitiquv[*,*,*,i],iquv1
-	slitiquv[0:nx/2-1,0:ny-1,*,i]=iquv1
-	dualiquv[0:nx-1,0:ny-1,*,i]=iquv0
-        if hsp eq 0 then begin
-		imdst=invert(mm_dst(hd,par))
-	endif else begin
-		imdst=invert(mm_dst(hd,par,/hsp,version=2,az=az,imgrot=ir))
-	endelse
-        iquv2=(m44_iquv(imdst,iquv1))[x1:x2,y1:y2,*]
-
-	; Kuhn
-	iquv3=iquv2
-	if keyword_set(abcd) then begin        
-		print,'Kuhn s method'
-		tmp=ta_ct_kuhn_0(iquv2,[0,0],[0,0],iquv3,nov=0,abcd=abcd)
-	endif
-
-	; Limb
-	iquv4=iquv3
-	if keyword_set(limb) then begin
-		print,'rotate +Q axis to pararel limb',hd.p
-	        mm=muellermatrix_rot(hd.p*!dtor)
-        	iquv4=m44_iquv(mm,iquv3)
-	endif
-
-	; Subtract crosstalk I
-	iquv5=iquv4
-	if keyword_set(remove_icrosstalk) then begin
-		print,'remove crosstalk from I'
-		for quv=1,3 do begin
-			img=iquv4[*,*,quv]/iquv4[*,*,0]	
-			img=img-mean(img[remove_icrosstalk[0]:remove_icrosstalk[1],remove_icrosstalk[2]:remove_icrosstalk[3]])
-			iquv5[*,*,quv]=img*iquv4[*,*,0]
-		endfor
-	endif
-
-	; Subtract sky
-	iquv6=iquv5
-	if keyword_set(sky) then begin
-		print,'subtract sky'
-		sky=reform(rebin(iquv5[sky[0]:sky[1],*,0],1,ny,1,1))
-		for ii=0,3 do begin
-			for x=0,nx/2-1 do begin
-				iquv6[x,*,ii,i]=iquv5[x,*,ii]-sky/median(sky[sky[2]:sky[3]])*median(iquv5[x,sky[2]:sky[3],ii,i])
-			endfor
-		endfor
-	endif
-
-	iquv[0:nx/2-1,0:ny-1,*,i]=iquv6
-	if i eq 0 then begin
-		nxmax=nx
-		nymax=ny
-	endif else begin
-		nxmax=nxmax>nx
-		nymax=nymax>ny
-	endelse
-	jump:
-endfor
-iquv=iquv[0:nxmax/2-1,0:nymax-1,*,*]
-;stop
-if keyword_set(outfile) then save,hds,iquv,x1,x2,y1,y2,file=outfile
-
-END
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
