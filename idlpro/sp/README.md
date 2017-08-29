@@ -4,7 +4,9 @@ IDL> .r hsp
 水平ポラリメータの子or孫カメラ制御ソフト立ち上げ  
 IDL> .r hsp_sub
 
-DST姿勢記録ソフト立ち上げ  
+DST姿勢記録ソフト立ち上げ（専用PCで行う）  
+IDL> .r rec_hazd.pro    
+or  
 デスクトップの *rec_hazd.sav* をダブルクリック
 
 垂直ポラリメータの観測ソフト立ち上げ  
